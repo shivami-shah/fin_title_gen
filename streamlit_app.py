@@ -3,7 +3,7 @@ import streamlit as st
 from helper import generate_titles, generate_titles_with_rogue_scores, save_to_database, read_from_database
 
 
-def handle_generate_button_click(rougue_scores: bool):
+def handle_generate_button_click(rougue_scores: bool, api_key: str):
     if not input_summary:
         st.warning("Please enter some content in the summary textbox to generate titles.")
         st.session_state.generated_titles = []
@@ -12,7 +12,7 @@ def handle_generate_button_click(rougue_scores: bool):
         return
     if not rougue_scores:
         with st.spinner("Generating titles..."):
-            st.session_state.generated_titles = generate_titles(summary=input_summary, model=st.session_state.model_selector)
+            st.session_state.generated_titles = generate_titles(summary=input_summary, model=st.session_state.model_selector, api_key=api_key)
             st.session_state.titles_generated_flag = True
             if st.session_state.generated_titles:
                 st.session_state.selected_title = st.session_state.generated_titles[0]
@@ -26,7 +26,7 @@ def handle_generate_button_click(rougue_scores: bool):
             st.session_state.selected_title = None
             return
         with st.spinner("Generating titles with Rouge Scores..."):
-            st.session_state.generated_titles = generate_titles_with_rogue_scores(summary=input_summary, model=st.session_state.model_selector, user_title=input_title) # Use session_state for selected_model
+            st.session_state.generated_titles = generate_titles_with_rogue_scores(summary=input_summary, model=st.session_state.model_selector, user_title=input_title, api_key=api_key) # Use session_state for selected_model
             st.session_state.titles_generated_flag = True
             if st.session_state.generated_titles:
                 st.session_state.selected_title = st.session_state.generated_titles[0]
@@ -49,6 +49,7 @@ def handle_save_button_click():
             
             
 # --- Streamlit App ---
+open_ai_api_key = st.secrets['OPENAI_API_KEY']
 st.set_page_config(page_title="LLM Title Generator POC", layout="centered")
 st.title("LLM-Powered Title Generator")
 tab1, tab2 = st. tabs(["Generate New Title", "Generated Titles"])
@@ -113,7 +114,7 @@ with tab1:
             disabled=disable_button1,
             help="This button is enabled when the 'User Title' is empty.",
             on_click=handle_generate_button_click,
-            args=(False,)
+            args=(False,open_ai_api_key,)
         )
 
     with col2:
@@ -123,7 +124,7 @@ with tab1:
             disabled=disable_button2,
             help="This button is enabled when a 'User Title' is provided.",
             on_click=handle_generate_button_click,
-            args=(True,)
+            args=(True,open_ai_api_key,)
         )
 
     # The condition now checks the flag in session_state

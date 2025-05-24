@@ -1,6 +1,6 @@
 fin_summary_gen/
 __pycache__/
-.env
+secrets.toml
 .vscode/
 old_code/
 launch.json

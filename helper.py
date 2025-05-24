@@ -1,10 +1,10 @@
 from typing import List
 from rouge_score import rouge_scorer
-from dotenv import load_dotenv
-load_dotenv()
+# from dotenv import load_dotenv
+# load_dotenv()
 
 
-def get_llm_response(prompt: str, model: str) -> str:
+def get_llm_response(prompt: str, model: str, api_key: str) -> str:
     """
     Get a response from the LLM (Language Model) based on the provided prompt.
     
@@ -15,7 +15,7 @@ def get_llm_response(prompt: str, model: str) -> str:
     Returns:
         str: The response from the LLM.
     """
-    print(f"Getting LLM response for prompt: {prompt}")
+    print(f"Getting LLM response for prompt: {prompt} with api_key: {api_key}")
     # TODO: Placeholder for actual LLM response logic
     return "LLM Response"
 
@@ -62,7 +62,7 @@ def clean_response(response: str) -> str:
     return generate_titles
 
 
-def generate_titles(summary: str, model: str) -> List[str]:
+def generate_titles(summary: str, model: str, api_key:str) -> List[str]:
     """
     Generate titles based on the provided summary using the specified model.
     
@@ -75,7 +75,7 @@ def generate_titles(summary: str, model: str) -> List[str]:
     """
     print(f"Generating titles for summary: {summary} using model: {model}")
     prompt = make_prompt_for_llm(summary=summary)
-    response = get_llm_response(prompt=prompt, model=model)
+    response = get_llm_response(prompt=prompt, model=model, api_key=api_key)
     generated_titles = clean_response(response)
     return generated_titles
 
@@ -97,7 +97,7 @@ def calculate_rouge_scores(title: str, generated_title: str) -> float:
     return (score)
 
 
-def generate_titles_with_rogue_scores(summary: str, model: str, user_title: str) -> List[str]:
+def generate_titles_with_rogue_scores(summary: str, model: str, user_title: str, api_key:str) -> List[str]:
     """
     Generate titles based on the provided summary using the specified model.
     
@@ -108,10 +108,7 @@ def generate_titles_with_rogue_scores(summary: str, model: str, user_title: str)
     Returns:
         List[str]: A list of generated titles.
     """
-    print(f"Generating titles and rogue score for summary: {summary} using model: {model}")
-    prompt = make_prompt_for_llm(summary=summary)
-    response = get_llm_response(prompt=prompt, model=model)
-    generated_titles = clean_response(response)
+    generated_titles= generate_titles(summary=summary, model=model, api_key=api_key)
     generated_titles_with_rouge_scores = []
     for generated_title in generated_titles:
         rouge_score = calculate_rouge_scores(title=user_title, generated_title=generated_title)
