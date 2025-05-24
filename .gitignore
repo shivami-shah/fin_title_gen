@@ -1,0 +1,6 @@
+fin_summary_gen/
+__pycache__/
+.env
+.vscode/
+old_code/
+launch.json
