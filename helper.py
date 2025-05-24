@@ -1,7 +1,20 @@
 from typing import List
 from rouge_score import rouge_scorer
-# from dotenv import load_dotenv
-# load_dotenv()
+from gspread_dataframe import get_as_dataframe, set_with_dataframe
+import pandas as pd
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
+
+scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+
+import streamlit as st
+credentials = ServiceAccountCredentials.from_json_keyfile_dict(
+    st.secrets["google_service_account"], scope
+)
+client = gspread.authorize(credentials)
+
+spreadsheet = client.open("Financial Title Generator")
+worksheet = spreadsheet.worksheet("Titles")
 
 
 def get_llm_response(prompt: str, model: str, api_key: str) -> str:
@@ -117,7 +130,7 @@ def generate_titles_with_rogue_scores(summary: str, model: str, user_title: str,
     return generated_titles_with_rouge_scores
 
 
-def save_to_database(connection: str, data: List[dict]) -> str:
+def save_to_database(data: List) -> str:
     """
     Save the generated titles and their ROUGE scores to a database.
     
@@ -128,12 +141,32 @@ def save_to_database(connection: str, data: List[dict]) -> str:
     Returns:
         str: A message indicating the result of the operation.
     """
-    print(f"Saving data to database: {connection}")
-    # TODO: Placeholder for actual database saving logic
-    return "Data saved successfully"
+    print(f"Saving data to database: {data}")
+    try:
+        df = read_from_database()
+        if not df.empty:
+            df["ID"] = pd.to_numeric(df["ID"], errors="coerce")
+            new_id = df["ID"].max() + 1
+        else:
+            new_id = 1
+            
+        selected_title = data[3] if len(data) == 4 else ""
+        if " \t- ROUGE Score: " in selected_title:
+            title, score = selected_title.split(" \t- ROUGE Score: ", 1)
+            data[3] = title.strip()
+            data.append(score.strip())
+        else:
+            data.append("")            
+            
+        data.insert(0, new_id)
+        worksheet.append_row(data)
+        return True
+    except Exception as e:
+        print(f"Error saving data to database: {e}")
+        return False
 
 
-def read_from_database(connection: str) -> List[dict]:
+def read_from_database() -> pd.DataFrame:
     """
     Read data from the database.
     
@@ -141,9 +174,8 @@ def read_from_database(connection: str) -> List[dict]:
         connection (str): The database connection string.
         
     Returns:
-        List[dict]: The data read from the database.
+        pd.DataFrame: The data read from the database.
     """
-    print(f"Reading data from database: {connection}")
-    data = []
-    # TODO: Placeholder for actual database reading logic
-    return data
+    print(f"Reading data from spreadsheets")
+    df = get_as_dataframe(worksheet, evaluate_formulas=True).dropna(how="all")
+    return df

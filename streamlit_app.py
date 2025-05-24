@@ -36,14 +36,22 @@ def handle_generate_button_click(rougue_scores: bool, api_key: str):
 def handle_save_button_click():
     if st.session_state.selected_title:
         with st.spinner("Saving selected title..."):
-            save_to_database(input_summary, st.session_state.selected_title)
-            st.success(f"Successfully saved: '{st.session_state.selected_title}' for summary.")
-            # Clear generated titles after saving
-            st.session_state.generated_titles = []
-            st.session_state.titles_generated_flag = False
-            st.session_state.selected_title = None
-            st.session_state.input_summary_text_area = ""
-            st.session_state.input_title_text_input = ""
+            data = [st.session_state.input_summary_text_area,
+                    st.session_state.input_title_text_input if st.session_state.input_title_text_input else "",
+                    st.session_state.model_selector,
+                    st.session_state.selected_title
+                    ]
+            status = save_to_database(data=data)
+            if status:
+                st.success(f"Successfully saved: '{st.session_state.selected_title}'")
+                # Clear generated titles after saving
+                st.session_state.generated_titles = []
+                st.session_state.titles_generated_flag = False
+                st.session_state.selected_title = None
+                st.session_state.input_summary_text_area = ""
+                st.session_state.input_title_text_input = ""
+            else:
+                st.error("Failed to save the selected title. Please try again.")
     else:
         st.warning("No title selected to save.")
             
@@ -165,7 +173,11 @@ with tab1:
         
 with tab2:
     st.header("Generated Titles")
-    st.write("This feature is under development. Please check back later.")
-    # TODO: Placeholder for future implementation
-    data = read_from_database("database_connection_string")
-    st.write(data)
+    
+    data = read_from_database()
+    if data.empty:
+        st.warning("No titles found in the database.")
+    else:
+        st.subheader("Titles from Database:")
+        st.dataframe(data, use_container_width=True)
+        st.markdown("---")
