@@ -1,104 +1,73 @@
 from typing import List
 import streamlit as st
-from helper import generate_titles, generate_titles_with_rogue_scores, save_to_database, get_content_from_url
+from helper import generate_titles, save_to_database, get_content_from_url, read_from_database
 
-def handle_generate_button_click(input_content: str, input_title: str, generate_type: str, api_key: str, selected_model: str):
-    # Clear previous results and states
-    st.session_state.generated_titles = []
-    st.session_state.titles_generated_flag = False
-    st.session_state.selected_title = None
-    st.session_state.editable_selected_title = ""
+open_ai_api_key = st.secrets['OPENAI_API_KEY']
+gemini_api_key = st.secrets['GEMINI_API_KEY']
 
-    # Set the current tab type
-    st.session_state.current_tab_type = generate_type
-
-    if generate_type == "summary_only":
-        if not input_content:
-            st.warning("Please enter some content in the summary textbox to generate titles.")
-            return
-        with st.spinner("Generating titles from summary..."):
-            st.session_state.generated_titles = generate_titles(
+def handle_generate_button_click():
+    model = st.session_state.model_selector
+    is_url = True if st.session_state.selected_input_source == "url" else False
+    is_rouge = True if st.session_state.selected_scoring_method == "rouge" else False
+    input_content = st.session_state.input_url_text_input if is_url else st.session_state.input_summary_text_area
+    user_title = st.session_state.input_title_text_input if is_rouge else ""
+    if model == "Open AI":
+        api_key = open_ai_api_key
+    elif model == "Gemini":
+        api_key = gemini_api_key
+    else:
+        api_key = None
+    
+    if not input_content:
+        st.warning("Please enter some content to generate titles.")
+        return
+    if is_rouge and not user_title:
+        st.warning("Please provide a 'User Title' to generate titles with Rouge Scores.")
+        return
+    with st.spinner("Generating titles..."):
+        st.session_state.generated_titles, st.session_state.rouge_scores = generate_titles(
                 summary=input_content,
-                model=selected_model, # Use the passed selected_model
+                user_title=user_title,
+                model=model,
                 api_key=api_key,
-                is_url_content=False
+                is_url_content=is_url,
+                is_rouge=is_rouge
             )
-            st.session_state.titles_generated_flag = True
-    elif generate_type == "summary_rouge":
-        if not input_content:
-            st.warning("Please enter some content in the summary textbox to generate titles.")
-            return
-        if not input_title:
-            st.warning("Please provide a 'User Title' to generate titles with Rouge Scores.")
-            return
-        with st.spinner("Generating titles with Rouge Scores from summary..."):
-            st.session_state.generated_titles = generate_titles_with_rogue_scores(
-                summary=input_content,
-                model=selected_model, # Use the passed selected_model
-                user_title=input_title,
-                api_key=api_key
-            )
-            st.session_state.titles_generated_flag = True
-    elif generate_type == "url":
-        if not input_content:
-            st.warning("Please enter a URL to generate titles.")
-            return
-        with st.spinner("Fetching content and generating titles from URL..."):
-            # First, fetch content from URL
-            url_content = get_content_from_url(input_content)
-            if not url_content:
-                st.error("Could not retrieve content from the provided URL. Please check the URL or try again.")
-                return
+        
+
+def handle_save_button_click():    
+    with st.spinner("Saving selected title..."):
+        data_to_save = [
+            st.session_state.model_selector,
+            st.session_state.input_summary_text_area if st.session_state.selected_input_source == "summary" else "",
+            st.session_state.input_url_text_input if st.session_state.selected_input_source == "url" else "",
+            st.session_state.editable_selected_title,
+            st.session_state.input_title_text_input if st.session_state.selected_scoring_method == "rouge" else "",
+            st.session_state.rouge_scores[st.session_state.selected_title_index] if st.session_state.selected_scoring_method == "rouge" else ""
+        ]
+        success = save_to_database(data=data_to_save)
+        if success:
+            st.success("Title saved successfully!")
+            for key in ["input_summary_text_area", "input_url_text_input", 
+                         "input_title_text_input", "generated_titles", 
+                         "rouge_scores", "selected_title_index", 
+                         "editable_selected_title"]:
+                if key in st.session_state:
+                    del st.session_state[key]
             
-            # Then generate titles using the extracted content
-            st.session_state.generated_titles = generate_titles(
-                summary=url_content, # Pass the fetched content as summary
-                model=selected_model, # Use the passed selected_model
-                api_key=api_key,
-                is_url_content=True # Indicate that the content is from a URL
-            )
-            st.session_state.titles_generated_flag = True
-
-    if st.session_state.generated_titles:
-        st.session_state.selected_title = st.session_state.generated_titles[0]
-        st.session_state.editable_selected_title = st.session_state.generated_titles[0]
-    else:
-        st.session_state.selected_title = None
-        st.session_state.editable_selected_title = ""
-
-def handle_save_button_click(source_type: str, selected_model_for_save: str):
-    if st.session_state.editable_selected_title:
-        with st.spinner("Saving selected title..."):
-            # Determine which input field was used for the source
-            source_value = ""
-            if source_type == "summary_only" or source_type == "summary_rouge":
-                source_value = st.session_state.input_summary_text_area if 'input_summary_text_area' in st.session_state else ""
-            elif source_type == "url":
-                source_value = st.session_state.input_url_text_input if 'input_url_text_input' in st.session_state else ""
-
-            data = [
-                source_value, # This will be either summary or URL
-                st.session_state.input_title_text_input if st.session_state.input_title_text_input and source_type == "summary_rouge" else "",
-                selected_model_for_save, # Use the passed model
-                st.session_state.editable_selected_title
-            ]
-            status = save_to_database(data=data)
-            if status:
-                st.success(f"Successfully saved: '{st.session_state.editable_selected_title}'")
-                # Clear generated titles and inputs after saving
-                st.session_state.generated_titles = []
-                st.session_state.titles_generated_flag = False
-                st.session_state.selected_title = None
-                st.session_state.editable_selected_title = ""
-                
-                # Clear the specific input fields used for the current session
-                if 'input_summary_text_area' in st.session_state:
-                    st.session_state.input_summary_text_area = ""
-                if 'input_title_text_input' in st.session_state:
-                    st.session_state.input_title_text_input = ""
-                if 'input_url_text_input' in st.session_state:
-                    st.session_state.input_url_text_input = ""
-            else:
-                st.error("Failed to save the selected title. Please try again.")
-    else:
-        st.warning("No title selected to save.")
+            st.session_state.input_summary_text_area = ""
+            st.session_state.input_url_text_input = ""
+            st.session_state.input_title_text_input = ""
+        else:
+            st.error("Failed to save the title. Try again later.")
+            
+            
+def read_from_db():
+    with st.spinner("Loading history from database..."):
+        df = read_from_database()
+        if df.empty:
+            st.warning("No history found in the database.")
+        else:
+            st.subheader("Titles from Database:")
+            st.dataframe(df, use_container_width=True, hide_index=True)
+            st.markdown("---")

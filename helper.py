@@ -5,7 +5,9 @@ import pandas as pd
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
-scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+scope = ["https://spreadsheets.google.com/feeds", 
+         "https://www.googleapis.com/auth/drive",
+        ]
 
 import streamlit as st
 credentials = ServiceAccountCredentials.from_json_keyfile_dict(
@@ -13,7 +15,7 @@ credentials = ServiceAccountCredentials.from_json_keyfile_dict(
 )
 client = gspread.authorize(credentials)
 
-spreadsheet = client.open("Financial Title Generator")
+spreadsheet = client.open_by_key(st.secrets["google_service_account"]["spreadsheet_id"])
 worksheet = spreadsheet.worksheet("Titles")
 
 
@@ -94,25 +96,6 @@ def clean_response(response: str) -> List[str]:
     return generate_titles
 
 
-def generate_titles(summary: str, model: str, api_key:str, is_url_content: bool = False) -> List[str]:
-    """
-    Generate titles based on the provided summary/URL content using the specified model.
-    
-    Args:
-        summary (str): The summary text or URL content to generate titles for.
-        model (str): The model to use for title generation.
-        is_url_content (bool): True if summary is from a URL, False if it's a direct summary.
-        
-    Returns:
-        List[str]: A list of generated titles.
-    """
-    print(f"Generating titles for content: {summary} using model: {model}")
-    prompt = make_prompt_for_llm(text_content=summary, is_url_content=is_url_content)
-    response = get_llm_response(prompt=prompt, model=model, api_key=api_key)
-    generated_titles = clean_response(response)
-    return generated_titles
-
-
 def calculate_rouge_scores(title: str, generated_title: str) -> float:
     """
     Calculate the ROUGE score between the original title and the generated title.
@@ -130,25 +113,28 @@ def calculate_rouge_scores(title: str, generated_title: str) -> float:
     return (score)
 
 
-def generate_titles_with_rogue_scores(summary: str, model: str, user_title: str, api_key:str) -> List[str]:
+def generate_titles(summary: str, user_title: str, model: str, api_key:str, is_url_content: bool = False, is_rouge: bool = False) -> List[str]:
     """
-    Generate titles based on the provided summary using the specified model, and calculate ROUGE scores.
+    Generate titles based on the provided summary/URL content using the specified model.
     
     Args:
-        summary (str): The summary text to generate titles for.
+        summary (str): The summary text or URL content to generate titles for.
         model (str): The model to use for title generation.
-        user_title (str): The user-provided title for ROUGE score calculation.
+        is_url_content (bool): True if summary is from a URL, False if it's a direct summary.
         
     Returns:
-        List[str]: A list of generated titles with ROUGE scores appended.
+        List[str]: A list of generated titles.
     """
-    generated_titles= generate_titles(summary=summary, model=model, api_key=api_key, is_url_content=False)
-    generated_titles_with_rouge_scores = []
-    for generated_title in generated_titles:
-        rouge_score = calculate_rouge_scores(title=user_title, generated_title=generated_title)
-        generated_titles_with_rouge_scores.append(f"{generated_title} \t- ROUGE Score: {rouge_score}")
-    print(f"Generated titles with ROUGE scores")
-    return generated_titles_with_rouge_scores
+    prompt = make_prompt_for_llm(text_content=summary, is_url_content=is_url_content)
+    response = get_llm_response(prompt=prompt, model=model, api_key=api_key)
+    generated_titles = clean_response(response)
+    rouge_scores = []
+    
+    if is_rouge:
+        for generated_title in generated_titles:
+            rouge_score = calculate_rouge_scores(title=user_title, generated_title=generated_title)
+            rouge_scores.append(rouge_score)
+    return generated_titles, rouge_scores
 
 
 def save_to_database(data: List) -> bool:
@@ -157,12 +143,11 @@ def save_to_database(data: List) -> bool:
     
     Args:
         data (List[Any]): The data to save to the database.
-                          Expected format: [summary/URL, user_title, model, selected_title, rouge_score (optional)]
+                Expected format: [model, summary, generated title, user title (optional), rouge_score (optional)]
         
     Returns:
         bool: True if saving was successful, False otherwise.
     """
-    print(f"Saving data to database: {data}")
     try:
         df = read_from_database()
         if not df.empty:
@@ -183,7 +168,6 @@ def save_to_database(data: List) -> bool:
         worksheet.append_row(data)
         return True
     except Exception as e:
-        print(f"Error saving data to database: {e}")
         return False
 
 
@@ -194,6 +178,5 @@ def read_from_database() -> pd.DataFrame:
     Returns:
         pd.DataFrame: The data read from the database.
     """
-    print(f"Reading data from spreadsheets")
     df = get_as_dataframe(worksheet, evaluate_formulas=True).dropna(how="all")
     return df

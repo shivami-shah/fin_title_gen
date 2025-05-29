@@ -4,3 +4,4 @@ secrets.toml
 .vscode/
 old_code/
 launch.json
+pip.txt
