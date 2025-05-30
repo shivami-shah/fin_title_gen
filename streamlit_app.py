@@ -11,6 +11,8 @@ def start_page():
         st.session_state.selected_input_source = "summary"
     if 'selected_scoring_method' not in st.session_state:
         st.session_state.selected_scoring_method = "no_rouge"
+    if 'generated_flag' not in st.session_state:
+        st.session_state.generated_flag = False
         
     input_options = ["summary", "url"]
     scoring_methods = ["no_rouge", "rouge"]
@@ -31,7 +33,8 @@ def start_page():
         index=0,
         format_func=lambda x: "From Summary" if x == "summary" else "From URL",
         key="selected_input_source",
-        horizontal=True
+        horizontal=True,
+        disabled=st.session_state.generated_flag,
     )
     
     st.radio(
@@ -40,7 +43,8 @@ def start_page():
         index=0,
         format_func=lambda x: "No Rouge Score" if x == "no_rouge" else "With Rouge Score",
         key="selected_scoring_method",
-        horizontal=True
+        horizontal=True,
+        disabled=st.session_state.generated_flag,
     )
 
 
@@ -52,7 +56,7 @@ def handle_input_selection():
         st.text_input("Enter URL:", key="input_url_text_input")
         
     if st.session_state.selected_scoring_method == "rouge":
-        st.text_input("Enter User Title (for Rouge Scoring):", key="input_title_text_input")
+        st.text_area("Enter User Title (for Rouge Scoring):", key="input_title_text_area")
         
     st.button(
         "Generate Titles",
@@ -87,7 +91,7 @@ def save_editable_title():
     if 'selected_title_index' in st.session_state:
         st.markdown("---")
         st.subheader("Edit Selected Title (Optional):")
-        st.session_state.editable_selected_title = st.text_input(
+        st.session_state.editable_selected_title = st.text_area(
             "Make any desired edits to the selected title:",
             value=st.session_state.generated_titles[st.session_state.selected_title_index],
             key="editable_title_input"

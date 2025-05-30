@@ -4,12 +4,15 @@ from gspread_dataframe import get_as_dataframe, set_with_dataframe
 import pandas as pd
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
+from openai import OpenAI
 
+OPENAI_MODEL = "gpt-4o"
+
+# Google Sheets API setup
+import streamlit as st
 scope = ["https://spreadsheets.google.com/feeds", 
          "https://www.googleapis.com/auth/drive",
         ]
-
-import streamlit as st
 credentials = ServiceAccountCredentials.from_json_keyfile_dict(
     st.secrets["google_service_account"], scope
 )
@@ -17,32 +20,6 @@ client = gspread.authorize(credentials)
 
 spreadsheet = client.open_by_key(st.secrets["google_service_account"]["spreadsheet_id"])
 worksheet = spreadsheet.worksheet("Titles")
-
-
-def get_llm_response(prompt: str, model: str, api_key: str) -> str:
-    """
-    Get a response from the LLM (Language Model) based on the provided prompt.
-    
-    Args:
-        prompt (str): The prompt to send to the LLM.
-        model (str): The model to use for generating the response.
-        
-    Returns:
-        str: The response from the LLM.
-    """
-    print(f"Getting LLM response for prompt: {prompt} with api_key: {api_key}")
-    # TODO: Placeholder for actual LLM response logic
-    return "LLM Response"
-
-    # client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-    # try:
-    #     response = client.chat.completions.create(
-    #         model=model
-    #         messages=[{"role": "user", "content": prompt}]
-    #     )
-    #     return response.choices[0].message.content
-    # except Exception as e:
-    #     return f"Error calling LLM: {e}"
 
 
 def get_content_from_url(url: str) -> str:
@@ -58,10 +35,10 @@ def get_content_from_url(url: str) -> str:
     """
     print(f"Fetching content from URL: {url}")
     # TODO: Implement actual URL content extraction (e.g., using requests and BeautifulSoup)
-    return f"This is placeholder content extracted from the URL: {url}. It contains information relevant to financial titles."
+    return "This is a placeholder for content extracted from the URL."
 
 
-def make_prompt_for_llm(text_content: str, is_url_content: bool = False) -> str:
+def make_prompt_for_llm(instruction: str, text_content: str, is_url_content: bool = False) -> str:
     """
     Create a prompt for the LLM based on the provided summary or URL content.
     
@@ -72,12 +49,41 @@ def make_prompt_for_llm(text_content: str, is_url_content: bool = False) -> str:
     Returns:
         str: The generated prompt.
     """
-    print(f"Creating prompt with {'URL content' if is_url_content else 'summary'}")
     if is_url_content:
         prompt = "" #TODO: Placeholder for actual URL content prompt logic
     else:
-        prompt = "" #TODO: Placeholder for actual URL content prompt logic
+        prompt = instruction + text_content
     return prompt
+
+
+def get_llm_response(prompt: str, model: str, api_key: str) -> str:
+    """
+    Get a response from the LLM (Language Model) based on the provided prompt.
+    
+    Args:
+        prompt (str): The prompt to send to the LLM.
+        model (str): The model to use for generating the response.
+        
+    Returns:
+        str: The response from the LLM.
+    """
+    if model == "gpt-4o":
+        # Using OpenAI's API for gpt-4o model
+        try:
+            openai_client = OpenAI(api_key=api_key)
+            response_stream = openai_client.chat.completions.create(
+                model=OPENAI_MODEL,
+                stream=True,
+                messages=[{"role": "user", "content": prompt}]
+            )
+            response = ""
+            for chunk in response_stream:
+                response += chunk.choices[0].delta.content or ""
+            return response
+        except Exception as e:
+            return
+    else:
+        return
 
 
 def clean_response(response: str) -> List[str]:
@@ -90,10 +96,21 @@ def clean_response(response: str) -> List[str]:
     Returns:
         List[str]: A list of cleaned titles.
     """
-    print(f"Cleaning response")
-    # TODO: Placeholder for actual response cleaning logic
-    generate_titles = ["Generated Title 1", "Generated Title 2", "Generated Title 3", "Generated Title 4", "Generated Title 5"]
-    return generate_titles
+    lines = response.strip().split('\n')
+    lines = [line for line in lines if line.strip()]
+    generated_titles = []
+    for line in lines:
+        print(line)        
+        line = line.strip()        
+        if line[0].isdigit():
+            line = line[1:].strip()
+        if line[0] == '.':
+            line = line[1:].strip()
+        if line.startswith('"') and line.endswith('"'):
+            line = line[1:-1].strip()
+        generated_titles.append(line)
+    
+    return generated_titles
 
 
 def calculate_rouge_scores(title: str, generated_title: str) -> float:
@@ -113,7 +130,7 @@ def calculate_rouge_scores(title: str, generated_title: str) -> float:
     return (score)
 
 
-def generate_titles(summary: str, user_title: str, model: str, api_key:str, is_url_content: bool = False, is_rouge: bool = False) -> List[str]:
+def generate_titles(instruction: str, summary: str, user_title: str, model: str, api_key:str, is_url_content: bool = False, is_rouge: bool = False) -> List[str]:
     """
     Generate titles based on the provided summary/URL content using the specified model.
     
@@ -125,15 +142,20 @@ def generate_titles(summary: str, user_title: str, model: str, api_key:str, is_u
     Returns:
         List[str]: A list of generated titles.
     """
-    prompt = make_prompt_for_llm(text_content=summary, is_url_content=is_url_content)
+    prompt = make_prompt_for_llm(text_content=summary, is_url_content=is_url_content, instruction=instruction)
     response = get_llm_response(prompt=prompt, model=model, api_key=api_key)
-    generated_titles = clean_response(response)
-    rouge_scores = []
     
+    if not response:
+        return [], []
+    
+    generated_titles = clean_response(response)
+    
+    rouge_scores = []
     if is_rouge:
         for generated_title in generated_titles:
             rouge_score = calculate_rouge_scores(title=user_title, generated_title=generated_title)
             rouge_scores.append(rouge_score)
+            
     return generated_titles, rouge_scores
 
 
