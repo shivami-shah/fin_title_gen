@@ -5,8 +5,7 @@ import pandas as pd
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from openai import OpenAI
-
-OPENAI_MODEL = "gpt-4o"
+from google import genai
 
 # Google Sheets API setup
 import streamlit as st
@@ -67,12 +66,11 @@ def get_llm_response(prompt: str, model: str, api_key: str) -> str:
     Returns:
         str: The response from the LLM.
     """
-    if model == "gpt-4o":
-        # Using OpenAI's API for gpt-4o model
+    if model == "gpt-4o": # Using OpenAI's API for gpt-4o model
         try:
-            openai_client = OpenAI(api_key=api_key)
-            response_stream = openai_client.chat.completions.create(
-                model=OPENAI_MODEL,
+            client = OpenAI(api_key=api_key)
+            response_stream = client.chat.completions.create(
+                model=model,
                 stream=True,
                 messages=[{"role": "user", "content": prompt}]
             )
@@ -82,11 +80,22 @@ def get_llm_response(prompt: str, model: str, api_key: str) -> str:
             return response
         except Exception as e:
             return
-    else:
-        return
+    
+    if model == "gemini-2.0-flash": # Using Gemini's API for gemini-2.0-flash model
+        try:
+            client = genai.Client(api_key=api_key)
+            response = client.models.generate_content(
+                model=model,
+                contents=prompt)
+            return response.text
+        except Exception as e:
+            return
+    
+    if model == "perplexity-1.0": # Using Perplexity's API for perplexity-1.0 model
+        pass        
 
 
-def clean_response(response: str) -> List[str]:
+def clean_response(response: str, model: str) -> List[str]:
     """
     Clean the response from the LLM to extract the relevant information.
     
@@ -96,21 +105,31 @@ def clean_response(response: str) -> List[str]:
     Returns:
         List[str]: A list of cleaned titles.
     """
-    lines = response.strip().split('\n')
-    lines = [line for line in lines if line.strip()]
-    generated_titles = []
-    for line in lines:
-        print(line)        
-        line = line.strip()        
-        if line[0].isdigit():
-            line = line[1:].strip()
-        if line[0] == '.':
-            line = line[1:].strip()
-        if line.startswith('"') and line.endswith('"'):
-            line = line[1:-1].strip()
-        generated_titles.append(line)
+    if model == "gpt-4o" or model == "gemini-2.0-flash":
+        lines = response.strip().split('\n')
+        lines = [line for line in lines if line.strip()]
+        generated_titles = []
+        for line in lines:
+            line = line.strip()        
+            if line[0].isdigit():
+                line = line[1:].strip()
+            if line[0] == '.':
+                line = line[1:].strip()
+            if line.startswith("Here are "):
+                continue
+            if line.startswith("**"):
+                line = line.split("**")[-1].strip()
+            if line.startswith('"') and line.endswith('"'):
+                line = line[1:-1].strip()
+            if line.startswith("'") and line.endswith("'"):
+                line = line[1:-1].strip()
+            generated_titles.append(line)        
+        return generated_titles
     
-    return generated_titles
+    if model == "perplexity-1.0":
+        pass # TODO: Implement cleaning logic for Perplexity's response
+    
+    return []
 
 
 def calculate_rouge_scores(title: str, generated_title: str) -> float:
@@ -148,7 +167,7 @@ def generate_titles(instruction: str, summary: str, user_title: str, model: str,
     if not response:
         return [], []
     
-    generated_titles = clean_response(response)
+    generated_titles = clean_response(response=response, model=model)
     
     rouge_scores = []
     if is_rouge:

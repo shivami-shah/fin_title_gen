@@ -2,9 +2,15 @@ from typing import List
 import streamlit as st
 from helper import generate_titles, save_to_database, get_content_from_url, read_from_database
 
-open_ai_api_key = st.secrets['OPENAI_API_KEY']
-gemini_api_key = st.secrets['GEMINI_API_KEY']
-instruction = st.secrets['INSTRUCTION']
+openai_model = "gpt-4o"
+gemini_model = "gemini-2.0-flash"
+perplexity_model = "perplexity-1.0"
+openai_api_key = st.secrets['openai_api']['API_KEY']
+openai_instruction = st.secrets['openai_api']['INSTRUCTION']
+gemini_api_key = st.secrets['gemini_api']['API_KEY']
+gemini_instruction = st.secrets['gemini_api']['INSTRUCTION']
+perplexity_api_key = st.secrets['perplexity']['API_KEY']
+perplexity_instruction = st.secrets['perplexity']['INSTRUCTION']
 
 def handle_generate_button_click():
     model = st.session_state.model_selector
@@ -12,13 +18,7 @@ def handle_generate_button_click():
     is_rouge = True if st.session_state.selected_scoring_method == "rouge" else False
     input_content = st.session_state.input_url_text_input if is_url else st.session_state.input_summary_text_area
     user_title = st.session_state.input_title_text_area if is_rouge else ""
-    if model == "Open AI":
-        api_key = open_ai_api_key
-    elif model == "Gemini":
-        api_key = gemini_api_key
-    else:
-        api_key = None
-    
+        
     if not input_content:
         st.warning("Please enter some content to generate titles.")
         return
@@ -28,16 +28,31 @@ def handle_generate_button_click():
     
     with st.spinner("Generating titles..."):
         st.session_state.generated_flag = True
-        models = {"Open AI": "gpt-4o", "Gemini": "gemini-1.0", "Model 3": "model-3"}
+        models = {"Open AI": openai_model,
+                  "Gemini": gemini_model,
+                  "Perplexity": perplexity_model}
+        instructions = {
+            "Open AI": openai_instruction,
+            "Gemini": gemini_instruction,
+            "Perplexity": perplexity_instruction
+        }
+        api_keys = {
+            "Open AI": openai_api_key,
+            "Gemini": gemini_api_key,
+            "Perplexity": perplexity_api_key
+        }
+        
         if model in models:
-            model = models[model]
+            model_name = models[model]
+            instruction = instructions[model]
+            api_key = api_keys[model]
         else:
             st.error("Unsupported model selected.")
             return                       
         st.session_state.generated_titles, st.session_state.rouge_scores = generate_titles(
                 summary=input_content,
                 user_title=user_title,
-                model=model,
+                model=model_name,
                 api_key=api_key,
                 is_url_content=is_url,
                 is_rouge=is_rouge,

@@ -6,6 +6,7 @@ import streamlit_helper as sh
 st.set_page_config(page_title="LLM Title Generator POC", layout="centered")
 st.title("LLM-Powered Title Generator")
 
+
 def start_page():
     if 'selected_input_source' not in st.session_state:
         st.session_state.selected_input_source = "summary"
@@ -19,12 +20,13 @@ def start_page():
 
     st.subheader("Inputs For Title Generation", divider="red")
     
-    model_options = ["Open AI", "Gemini", "Model 3"]
+    model_options = ["Open AI", "Gemini", "Perplexity - Under Development"]
     selected_model = st.selectbox(
         "Choose a model for title generation:",
         options=model_options,
         index=0,
-        key="model_selector"
+        key="model_selector",
+        disabled=st.session_state.generated_flag,
     )
         
     st.radio(
@@ -62,7 +64,15 @@ def handle_input_selection():
         "Generate Titles",
         type="primary",
         on_click=sh.handle_generate_button_click,
+        disabled=st.session_state.generated_flag,
     )
+    
+    if st.session_state.generated_flag:
+        st.button(
+            "Reset",
+            type="secondary",
+            on_click=lambda: st.session_state.clear(),
+        )
     
 
 def display_generated_titles():
@@ -99,7 +109,7 @@ def save_editable_title():
         
         st.button(
             "Save Selected Title",
-            type="secondary",
+            type="primary",
             on_click=sh.handle_save_button_click,
         )
 
