@@ -20,6 +20,11 @@ client = gspread.authorize(credentials)
 spreadsheet = client.open_by_key(st.secrets["google_service_account"]["spreadsheet_id"])
 worksheet = spreadsheet.worksheet("Titles")
 
+# Model names
+OPENAI_MODEL = "gpt-4o"
+GEMINI_MODEL = "gemini-2.5-pro-preview-03-25"
+PERPLEXITY_MODEL = "perplexity-1.0"
+
 
 def get_content_from_url(url: str) -> str:
     """
@@ -66,7 +71,7 @@ def get_llm_response(prompt: str, model: str, api_key: str) -> str:
     Returns:
         str: The response from the LLM.
     """
-    if model == "gpt-4o": # Using OpenAI's API for gpt-4o model
+    if model == OPENAI_MODEL: # Using OpenAI's API for gpt-4o model
         try:
             client = OpenAI(api_key=api_key)
             response_stream = client.chat.completions.create(
@@ -81,7 +86,7 @@ def get_llm_response(prompt: str, model: str, api_key: str) -> str:
         except Exception as e:
             return
     
-    if model == "gemini-2.0-flash": # Using Gemini's API for gemini-2.0-flash model
+    if model == GEMINI_MODEL: # Using Gemini's API for gemini-2.0-flash model
         try:
             client = genai.Client(api_key=api_key)
             response = client.models.generate_content(
@@ -91,8 +96,8 @@ def get_llm_response(prompt: str, model: str, api_key: str) -> str:
         except Exception as e:
             return
     
-    if model == "perplexity-1.0": # Using Perplexity's API for perplexity-1.0 model
-        pass        
+    if model == PERPLEXITY_MODEL: # Using Perplexity's API for perplexity-1.0 model
+        return        
 
 
 def clean_response(response: str, model: str) -> List[str]:
@@ -105,7 +110,7 @@ def clean_response(response: str, model: str) -> List[str]:
     Returns:
         List[str]: A list of cleaned titles.
     """
-    if model == "gpt-4o" or model == "gemini-2.0-flash":
+    if model == OPENAI_MODEL or model == GEMINI_MODEL:
         lines = response.strip().split('\n')
         lines = [line for line in lines if line.strip()]
         generated_titles = []
@@ -126,7 +131,7 @@ def clean_response(response: str, model: str) -> List[str]:
             generated_titles.append(line)        
         return generated_titles
     
-    if model == "perplexity-1.0":
+    if model == PERPLEXITY_MODEL:
         pass # TODO: Implement cleaning logic for Perplexity's response
     
     return []

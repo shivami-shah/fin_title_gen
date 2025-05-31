@@ -1,10 +1,8 @@
 from typing import List
 import streamlit as st
 from helper import generate_titles, save_to_database, get_content_from_url, read_from_database
+from helper import OPENAI_MODEL, GEMINI_MODEL, PERPLEXITY_MODEL
 
-openai_model = "gpt-4o"
-gemini_model = "gemini-2.0-flash"
-perplexity_model = "perplexity-1.0"
 openai_api_key = st.secrets['openai_api']['API_KEY']
 openai_instruction = st.secrets['openai_api']['INSTRUCTION']
 gemini_api_key = st.secrets['gemini_api']['API_KEY']
@@ -28,9 +26,9 @@ def handle_generate_button_click():
     
     with st.spinner("Generating titles..."):
         st.session_state.generated_flag = True
-        models = {"Open AI": openai_model,
-                  "Gemini": gemini_model,
-                  "Perplexity": perplexity_model}
+        models = {"Open AI": OPENAI_MODEL,
+                  "Gemini": GEMINI_MODEL,
+                  "Perplexity": PERPLEXITY_MODEL}
         instructions = {
             "Open AI": openai_instruction,
             "Gemini": gemini_instruction,
