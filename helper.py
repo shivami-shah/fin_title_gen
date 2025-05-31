@@ -129,6 +129,10 @@ def clean_response(response: str, model: str) -> List[str]:
             if line.startswith("'") and line.endswith("'"):
                 line = line[1:-1].strip()
             generated_titles.append(line)        
+        
+        if len(generated_titles) == 10 and model == GEMINI_MODEL:
+            generated_titles = [item for index, item in enumerate(generated_titles) if index % 2 != 0]
+            
         return generated_titles
     
     if model == PERPLEXITY_MODEL:
