@@ -24,6 +24,7 @@ worksheet = spreadsheet.worksheet("Titles")
 OPENAI_MODEL = "gpt-4o"
 GEMINI_MODEL = "gemini-2.5-pro-preview-03-25"
 PERPLEXITY_MODEL = "perplexity-1.0"
+url_instruction = "The summary is in the follwoing URL. Please extract the content first.\n"
 
 
 def get_content_from_url(url: str) -> str:
@@ -54,10 +55,9 @@ def make_prompt_for_llm(instruction: str, text_content: str, is_url_content: boo
         str: The generated prompt.
     """
     if is_url_content:
-        prompt = "" #TODO: Placeholder for actual URL content prompt logic
-    else:
-        prompt = instruction + text_content
-    return prompt
+        instruction += url_instruction    
+    prompt = instruction + text_content
+    return prompt    
 
 
 def get_llm_response(prompt: str, model: str, api_key: str) -> str:
@@ -114,6 +114,10 @@ def clean_response(response: str, model: str) -> List[str]:
         lines = response.strip().split('\n')
         lines = [line for line in lines if line.strip()]
         generated_titles = []
+        
+        if model == GEMINI_MODEL:
+            lines = lines[1:]
+        
         for line in lines:
             line = line.strip()        
             if line[0].isdigit():
@@ -122,6 +126,9 @@ def clean_response(response: str, model: str) -> List[str]:
                 line = line[1:].strip()
             if line.startswith("Here are "):
                 continue
+            # first_line = line.split(".")[0].lower()
+            # if "extracted" in first_line or "provided url" in first_line or "content" in first_line:
+            #     continue
             if line.startswith("**"):
                 line = line.split("**")[-1].strip()
             if line.startswith('"') and line.endswith('"'):
