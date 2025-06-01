@@ -20,7 +20,7 @@ def start_page():
 
     st.subheader("Inputs For Title Generation", divider="red")
     
-    model_options = ["Open AI", "Gemini", "Perplexity - Under Development"]
+    model_options = ["Open AI", "Gemini", "Perplexity"]
     selected_model = st.selectbox(
         "Choose a model for title generation:",
         options=model_options,

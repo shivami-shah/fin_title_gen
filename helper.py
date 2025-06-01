@@ -21,10 +21,11 @@ spreadsheet = client.open_by_key(st.secrets["google_service_account"]["spreadshe
 worksheet = spreadsheet.worksheet("Titles")
 
 # Model names
-OPENAI_MODEL = "gpt-4o"
+OPENAI_MODEL = "chatgpt-4o-latest"
+OPENAI_FT_MODEL = "ft:gpt-40-2024-08-06:utilizeai:title-generation-v1:BdYmZT3t"
 GEMINI_MODEL = "gemini-2.5-pro-preview-03-25"
-PERPLEXITY_MODEL = "perplexity-1.0"
-url_instruction = "The summary is in the follwoing URL. Please extract the content first.\n"
+PERPLEXITY_MODEL = "sonar-pro"
+url_instruction = "The summary is in the following URL. Please extract the content first."
 
 
 def get_content_from_url(url: str) -> str:
@@ -55,8 +56,8 @@ def make_prompt_for_llm(instruction: str, text_content: str, is_url_content: boo
         str: The generated prompt.
     """
     if is_url_content:
-        instruction += url_instruction    
-    prompt = instruction + text_content
+        instruction += url_instruction + "URL: "
+    prompt = instruction + text_content + "Summary: "
     return prompt    
 
 
@@ -96,8 +97,19 @@ def get_llm_response(prompt: str, model: str, api_key: str) -> str:
         except Exception as e:
             return
     
-    if model == PERPLEXITY_MODEL: # Using Perplexity's API for perplexity-1.0 model
-        return        
+    if model == PERPLEXITY_MODEL: 
+        try:
+            client = OpenAI(api_key=api_key, base_url="https://api.perplexity.ai")
+            response = client.chat.completions.create(
+                model="sonar-pro",
+                messages=[
+                    {"role": "system", "content": ("")},
+                    {"role": "user", "content": (prompt)},
+                    ]
+            )
+            return response.choices[0].message.content
+        except Exception as e:
+            return
 
 
 def clean_response(response: str, model: str) -> List[str]:
@@ -110,7 +122,7 @@ def clean_response(response: str, model: str) -> List[str]:
     Returns:
         List[str]: A list of cleaned titles.
     """
-    if model == OPENAI_MODEL or model == GEMINI_MODEL:
+    if model == OPENAI_MODEL or model == GEMINI_MODEL or model == PERPLEXITY_MODEL:
         lines = response.strip().split('\n')
         lines = [line for line in lines if line.strip()]
         generated_titles = []
@@ -126,9 +138,6 @@ def clean_response(response: str, model: str) -> List[str]:
                 line = line[1:].strip()
             if line.startswith("Here are "):
                 continue
-            # first_line = line.split(".")[0].lower()
-            # if "extracted" in first_line or "provided url" in first_line or "content" in first_line:
-            #     continue
             if line.startswith("**"):
                 line = line.split("**")[-1].strip()
             if line.startswith('"') and line.endswith('"'):
@@ -141,9 +150,6 @@ def clean_response(response: str, model: str) -> List[str]:
             generated_titles = [item for index, item in enumerate(generated_titles) if index % 2 != 0]
             
         return generated_titles
-    
-    if model == PERPLEXITY_MODEL:
-        pass # TODO: Implement cleaning logic for Perplexity's response
     
     return []
 
