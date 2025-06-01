@@ -126,10 +126,7 @@ def clean_response(response: str, model: str) -> List[str]:
         lines = response.strip().split('\n')
         lines = [line for line in lines if line.strip()]
         generated_titles = []
-        
-        if model == GEMINI_MODEL:
-            lines = lines[1:]
-        
+            
         for line in lines:
             line = line.strip()        
             if line[0].isdigit():
