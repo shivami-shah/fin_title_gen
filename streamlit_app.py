@@ -8,7 +8,7 @@ st.title("LLM-Powered Title Generator")
 
 
 def on_model_selection_change():
-    if st.session_state.model_selector == "Open AI - Fine-tuned":
+    if st.session_state.model_selector == "Open AI - Finnovate Research":
         st.session_state.fine_tuned_model = True
         st.session_state.selected_input_source = "summary"
     else:
@@ -30,7 +30,7 @@ def start_page():
 
     st.subheader("Inputs For Title Generation", divider="red")
     
-    model_options = ["Open AI", "Gemini", "Perplexity", "Open AI - Fine-tuned"]
+    model_options = ["Open AI", "Gemini", "Perplexity", "Open AI - Finnovate Research"]
     selected_model = st.selectbox(
         "Choose a model for title generation:",
         options=model_options,
@@ -71,9 +71,9 @@ def handle_input_selection():
     if st.session_state.selected_scoring_method == "rouge":
         st.text_area("Enter User Title (for Rouge Scoring):", key="input_title_text_area")
         
-    if st.session_state.model_selector == "Open AI - Fine-tuned":
+    if st.session_state.model_selector == "Open AI - Finnovate Research":
         st.markdown(
-            "Note: The Open AI - Fine-tuned model will generate only one title based on the summary. URL content is not supported for this model.",
+            "Note: The 'Open AI - Finnovate Research' model will generate only one title based on the summary. URL content is not supported for this model.",
         )
         
     st.button(

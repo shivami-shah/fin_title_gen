@@ -30,18 +30,18 @@ def handle_generate_button_click():
         models = {"Open AI": OPENAI_MODEL,
                   "Gemini": GEMINI_MODEL,
                   "Perplexity": PERPLEXITY_MODEL,
-                  "Open AI - Fine-tuned": OPENAI_FT_MODEL}
+                  "Open AI - Finnovate Research": OPENAI_FT_MODEL}
         instructions = {
             "Open AI": openai_instruction,
             "Gemini": gemini_instruction,
             "Perplexity": perplexity_instruction,
-            "Open AI - Fine-tuned": openai_finetuned_instruction
+            "Open AI - Finnovate Research": openai_finetuned_instruction
         }
         api_keys = {
             "Open AI": openai_api_key,
             "Gemini": gemini_api_key,
             "Perplexity": perplexity_api_key,
-            "Open AI - Fine-tuned": openai_api_key
+            "Open AI - Finnovate Research": openai_api_key
         }
         
         if model in models:
