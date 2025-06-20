@@ -1,7 +1,7 @@
 from typing import List
 import streamlit as st
 from helper import generate_titles, save_to_database, get_content_from_url, read_from_database
-from helper import OPENAI_MODEL, GEMINI_MODEL, PERPLEXITY_MODEL
+from helper import OPENAI_MODEL, GEMINI_MODEL, PERPLEXITY_MODEL, OPENAI_FT_MODEL
 
 openai_api_key = st.secrets['openai_api']['API_KEY']
 openai_instruction = st.secrets['openai_api']['INSTRUCTION']
@@ -9,6 +9,7 @@ gemini_api_key = st.secrets['gemini_api']['API_KEY']
 gemini_instruction = st.secrets['gemini_api']['INSTRUCTION']
 perplexity_api_key = st.secrets['perplexity']['API_KEY']
 perplexity_instruction = st.secrets['perplexity']['INSTRUCTION']
+openai_finetuned_instruction = st.secrets['openai_api']['FT_INSTRUCTION']
 
 def handle_generate_button_click():
     model = st.session_state.model_selector
@@ -28,16 +29,19 @@ def handle_generate_button_click():
         st.session_state.generated_flag = True
         models = {"Open AI": OPENAI_MODEL,
                   "Gemini": GEMINI_MODEL,
-                  "Perplexity": PERPLEXITY_MODEL}
+                  "Perplexity": PERPLEXITY_MODEL,
+                  "Open AI - Fine-tuned": OPENAI_FT_MODEL}
         instructions = {
             "Open AI": openai_instruction,
             "Gemini": gemini_instruction,
-            "Perplexity": perplexity_instruction
+            "Perplexity": perplexity_instruction,
+            "Open AI - Fine-tuned": openai_finetuned_instruction
         }
         api_keys = {
             "Open AI": openai_api_key,
             "Gemini": gemini_api_key,
-            "Perplexity": perplexity_api_key
+            "Perplexity": perplexity_api_key,
+            "Open AI - Fine-tuned": openai_api_key
         }
         
         if model in models:

@@ -7,6 +7,14 @@ st.set_page_config(page_title="LLM Title Generator POC", layout="centered")
 st.title("LLM-Powered Title Generator")
 
 
+def on_model_selection_change():
+    if st.session_state.model_selector == "Open AI - Fine-tuned":
+        st.session_state.fine_tuned_model = True
+        st.session_state.selected_input_source = "summary"
+    else:
+        st.session_state.fine_tuned_model = False
+
+
 def start_page():
     if 'selected_input_source' not in st.session_state:
         st.session_state.selected_input_source = "summary"
@@ -14,21 +22,24 @@ def start_page():
         st.session_state.selected_scoring_method = "no_rouge"
     if 'generated_flag' not in st.session_state:
         st.session_state.generated_flag = False
+    if 'fine_tuned_model' not in st.session_state:
+        st.session_state.fine_tuned_model = False
         
     input_options = ["summary", "url"]
     scoring_methods = ["no_rouge", "rouge"]
 
     st.subheader("Inputs For Title Generation", divider="red")
     
-    model_options = ["Open AI", "Gemini", "Perplexity"]
+    model_options = ["Open AI", "Gemini", "Perplexity", "Open AI - Fine-tuned"]
     selected_model = st.selectbox(
         "Choose a model for title generation:",
         options=model_options,
         index=0,
         key="model_selector",
+        on_change=on_model_selection_change,
         disabled=st.session_state.generated_flag,
     )
-        
+       
     st.radio(
         "Select the input source for title generation:",
         options=input_options,
@@ -36,7 +47,7 @@ def start_page():
         format_func=lambda x: "From Summary" if x == "summary" else "From URL",
         key="selected_input_source",
         horizontal=True,
-        disabled=st.session_state.generated_flag,
+        disabled=st.session_state.generated_flag or st.session_state.fine_tuned_model,
     )
     
     st.radio(
@@ -59,6 +70,11 @@ def handle_input_selection():
         
     if st.session_state.selected_scoring_method == "rouge":
         st.text_area("Enter User Title (for Rouge Scoring):", key="input_title_text_area")
+        
+    if st.session_state.model_selector == "Open AI - Fine-tuned":
+        st.markdown(
+            "Note: The Open AI - Fine-tuned model will generate only one title based on the summary. URL content is not supported for this model.",
+        )
         
     st.button(
         "Generate Titles",

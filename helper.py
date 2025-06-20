@@ -22,7 +22,7 @@ worksheet = spreadsheet.worksheet("Titles")
 
 # Model names
 OPENAI_MODEL = "chatgpt-4o-latest"
-OPENAI_FT_MODEL = "ft:gpt-40-2024-08-06:utilizeai:title-generation-v1:BdYmZT3t"
+OPENAI_FT_MODEL = "ft:gpt-4o-2024-08-06:utilizeai:title-generation-v1:BdYmZT3t"
 GEMINI_MODEL = "gemini-2.5-pro-preview-03-25"
 PERPLEXITY_MODEL = "sonar-pro"
 url_instruction = "The summary is in the following URL. Please extract the content first."
@@ -57,7 +57,7 @@ def make_prompt_for_llm(instruction: str, text_content: str, is_url_content: boo
     """
     if is_url_content:
         instruction += url_instruction + "URL: "
-    prompt = instruction + text_content + "Summary: "
+    prompt = instruction + "Summary: " + text_content
     return prompt    
 
 
@@ -72,7 +72,7 @@ def get_llm_response(prompt: str, model: str, api_key: str) -> str:
     Returns:
         str: The response from the LLM.
     """
-    if model == OPENAI_MODEL: # Using OpenAI's API for gpt-4o model
+    if model == OPENAI_MODEL or model == OPENAI_FT_MODEL: # Using OpenAI's API for gpt-4o model
         try:
             client = OpenAI(api_key=api_key)
             response_stream = client.chat.completions.create(
@@ -122,7 +122,8 @@ def clean_response(response: str, model: str) -> List[str]:
     Returns:
         List[str]: A list of cleaned titles.
     """
-    if model == OPENAI_MODEL or model == GEMINI_MODEL or model == PERPLEXITY_MODEL:
+    if model == OPENAI_MODEL or model == GEMINI_MODEL or \
+        model == PERPLEXITY_MODEL or model == OPENAI_FT_MODEL:
         lines = response.strip().split('\n')
         lines = [line for line in lines if line.strip()]
         generated_titles = []
