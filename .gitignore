@@ -5,3 +5,9 @@ secrets.toml
 old_code/
 launch.json
 pip.txt
+*.code-workspace
+__pycache__
+*.log
+*.pyc
+*.xlsx
+*.csv
