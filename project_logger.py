@@ -48,6 +48,8 @@ def setup_classifier_project_logger(module_name):
 
 def setup_project_logger(module_name, project_type="classifier"):
     if project_type == "classifier":
-        setup_classifier_project_logger(module_name)
+        logger = setup_classifier_project_logger(module_name)
     else:
         raise ValueError(f"Invalid project type: {project_type}")
+    
+    return logger

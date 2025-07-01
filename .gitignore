@@ -11,3 +11,4 @@ __pycache__
 *.pyc
 *.xlsx
 *.csv
+*_report.txt

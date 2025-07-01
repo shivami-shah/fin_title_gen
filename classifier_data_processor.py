@@ -9,8 +9,9 @@ from openai import AsyncOpenAI, APIError, RateLimitError, APITimeoutError
 # Import configurations and logger setup
 from classifier_config import (
     MAX_RETRIES, RETRY_DELAY_SECONDS, BATCH_SIZE, CONCURRENT_REQUESTS,
-    MODEL_OUTPUT_DIR, OPENAI_API_KEY, PROMPT_TEMPLATE, PROCESSED_DATA_DIR, MODEL,
-    INPUT_CSV_NAME, OUTPUT_CSV_NAME
+    MODEL_OUTPUT_DIR, OPENAI_API_KEY, PROMPT_TEMPLATE, PROCESSED_DATA_DIR,
+    PROCESSED_CSV_NAME, FT_MODEL_OUTPUT_CSV_NAME, DEFAULT_MODEL_OUTPUT_CSV_NAME,
+    FT_MODEL, DEFAULT_MODEL
 )
 from project_logger import setup_project_logger
 
@@ -126,7 +127,7 @@ class APIManager:
     """
     def __init__(self, api_key, model, max_retries, retry_delay_seconds, logger):
         self.client = AsyncOpenAI(api_key=api_key, timeout=30.0)
-        self.model = model
+        self.model = FT_MODEL
         self.max_retries = max_retries
         self.retry_delay_seconds = retry_delay_seconds
         self.logger = logger
@@ -352,25 +353,26 @@ class MetricsReporter:
             self.logger.error(f"An unexpected error occurred during metrics generation: {e}", exc_info=True)
 
 
-class MainRunner:
+class DataProcessor:
+
     """
     Main class to orchestrate the entire classification process.
     """
     def __init__(self):
-        self.logger = setup_project_logger("main_runner")
+        self.logger = setup_project_logger("data_processor")
         self.data_loader = DataLoader(self.logger)
-        self.api_manager = APIManager(OPENAI_API_KEY, MODEL, MAX_RETRIES, RETRY_DELAY_SECONDS, self.logger)
+        self.api_manager = APIManager(OPENAI_API_KEY, FT_MODEL, MAX_RETRIES, RETRY_DELAY_SECONDS, self.logger)
         self.classifier = Classifier(self.data_loader, self.api_manager, self.logger, PROMPT_TEMPLATE, BATCH_SIZE, CONCURRENT_REQUESTS)
         self.metrics_reporter = MetricsReporter(self.logger)
-
-        self.input_file_path = os.path.join(PROCESSED_DATA_DIR, INPUT_CSV_NAME)
-        self.output_csv_file = os.path.join(MODEL_OUTPUT_DIR, OUTPUT_CSV_NAME)
+        self.input_file_path = os.path.join(PROCESSED_DATA_DIR, PROCESSED_CSV_NAME)
+        self.ft_output_csv_file = os.path.join(MODEL_OUTPUT_DIR, FT_MODEL_OUTPUT_CSV_NAME)
+        self.default_output_csv_file = os.path.join(MODEL_OUTPUT_DIR, DEFAULT_MODEL_OUTPUT_CSV_NAME)
         
         # Ensure model output directory exists
         os.makedirs(MODEL_OUTPUT_DIR, exist_ok=True)
 
 
-    async def run(self, is_test=False, limit_data=None):
+    async def run(self, is_test=False, is_default_model=False, limit_data=None):
         """
         Executes the main classification workflow.
 
@@ -396,11 +398,15 @@ class MainRunner:
             
         self.logger.info(f"Total items to consider from source: {len(input_data_list)}")
         
-        self.logger.info(f"Running classification with model '{MODEL}' on {len(input_data_list)} items.")
+        if is_default_model:
+            self.api_manager.model = DEFAULT_MODEL
+
+        self.logger.info(f"Running classification with model '{self.api_manager.model}' on {len(input_data_list)} items.")
         
         # Pass input_data_list directly to classifier for processing
-        final_processed_data = await self.classifier.classify_titles(input_data_list, self.output_csv_file)
+        self.output_csv_file = self.default_output_csv_file if is_default_model else self.ft_output_csv_file
         
+        final_processed_data = await self.classifier.classify_titles(input_data_list, self.output_csv_file)
         self.logger.info(f"Total items processed and saved in '{self.output_csv_file}': {len(final_processed_data)}")
         
         if is_test:
@@ -412,7 +418,6 @@ class MainRunner:
 
 # --- How to use the code ---
 if __name__ == "__main__":
-    main_runner = MainRunner()
-    # Run with is_test=True to generate metrics report
+    processor = DataProcessor()    # Run with is_test=True to generate metrics report
     # Use limit_data for quick testing on a subset of data
-    asyncio.run(main_runner.run(is_test=True, limit_data=105)) # For production, remove limit_data
+    asyncio.run(processor.run(is_test=True, limit_data=105)) # For production, remove limit_data

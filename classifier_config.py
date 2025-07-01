@@ -12,6 +12,9 @@ RAW_DATA_DIR = DATA_DIR / "daily_trackers"
 PROCESSED_DATA_DIR = DATA_DIR / "processed"
 MODEL_OUTPUT_DIR = DATA_DIR / "model_output"
 LOGS_DIR = DATA_DIR / "logs"
+PROCESSED_CSV_NAME = "processed.csv"
+FT_MODEL_OUTPUT_CSV_NAME = "output.csv"
+DEFAULT_MODEL_OUTPUT_CSV_NAME = "output_default.csv"
 
 # Ensure directories exist
 DATA_DIR.mkdir(exist_ok=True)
@@ -22,7 +25,8 @@ MODEL_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 OPENAI_API_KEY = st.secrets['openai_api']['API_KEY']
 PROMPT_TEMPLATE = st.secrets['openai_api']['TITLE_CLASSIFICATION_INSTRUCTION']
-MODEL = "ft:gpt-4o-mini-2024-07-18:utilizeai:title-classification-balanced:Bmcz4fNK"
+FT_MODEL = "ft:gpt-4o-mini-2024-07-18:utilizeai:title-classification-balanced:Bmcz4fNK"
+DEFAULT_MODEL = "chatgpt-4o-latest"
 BATCH_SIZE = 100  # Number of records to process before saving to CSV
 CONCURRENT_REQUESTS = 10 # Number of API requests to make concurrently within a batch
 MAX_RETRIES = 5   # Maximum number of retries for an API call per request

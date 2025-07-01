@@ -3,23 +3,24 @@ import csv
 import os
 from datetime import datetime, date
 from project_logger import setup_project_logger
-from classifier_config import RAW_DATA_DIR, PROCESSED_DATA_DIR
+from classifier_config import RAW_DATA_DIR, PROCESSED_CSV_NAME, PROCESSED_DATA_DIR
 
 class ExcelProcessor:
     """
     A class to encapsulate the logic for extracting data from Excel files
     and writing it to CSV. Adheres to SOLID principles by separating concerns.
     """
-    def __init__(self, raw_data_dir=RAW_DATA_DIR, processed_data_dir=PROCESSED_DATA_DIR):
+    def __init__(self, raw_data_dir=RAW_DATA_DIR, processed_csv=PROCESSED_CSV_NAME, processed_data_dir=PROCESSED_DATA_DIR):
         """
         Initializes the ExcelProcessor with input and output directories.
 
         Args:
             raw_data_dir (str): Directory containing raw Excel files.
-            processed_data_dir (str): Directory for processed CSV outputs.
+            processed_csv (str): Directory for processed CSV outputs.
         """
         self.raw_data_dir = raw_data_dir
         self.processed_data_dir = processed_data_dir
+        self.processed_csv = processed_csv
         self.logger = setup_project_logger("excel_extraction")
         os.makedirs(self.processed_data_dir, exist_ok=True) # Ensure output dir exists
 
@@ -183,8 +184,7 @@ class ExcelProcessor:
         today_date = date.today()
         # For simplicity, all data from all Excel files processed today will go into one CSV file
         # You could modify this to create a separate CSV per Excel file if needed.
-        output_csv_file_name = f"processed_data_{today_date.strftime('%Y%m%d')}.csv"
-        output_csv_file_path = os.path.join(self.processed_data_dir, output_csv_file_name)
+        output_csv_file_path = os.path.join(self.processed_data_dir, self.processed_csv)
 
         # Remove the CSV file if it exists from a previous run on the same day
         # to prevent duplicate appending if the script is run multiple times
