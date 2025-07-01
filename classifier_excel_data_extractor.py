@@ -1,10 +1,9 @@
 import openpyxl
 import csv
 import os
-import logging
 from datetime import datetime, date
 from project_logger import setup_project_logger
-from config import RAW_DATA_DIR, PROCESSED_DATA_DIR
+from classifier_config import RAW_DATA_DIR, PROCESSED_DATA_DIR
 
 class ExcelProcessor:
     """

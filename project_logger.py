@@ -1,9 +1,9 @@
 import logging
 import os
 from datetime import datetime
-from config import LOGS_DIR, LOGGING_LEVEL
+from classifier_config import LOGS_DIR, LOGGING_LEVEL
 
-def setup_project_logger(module_name):
+def setup_classifier_project_logger(module_name):
     """
     Sets up a logger for the project, outputting to a date-stamped file
     in 'data/logs' and to the console.
@@ -31,7 +31,7 @@ def setup_project_logger(module_name):
             logger.removeHandler(handler)
 
     # Create a file handler for detailed logs
-    file_handler = logging.FileHandler(LOG_FILE_PATH)
+    file_handler = logging.FileHandler(LOG_FILE_PATH, encoding='utf-8')
     file_handler.setLevel(LOGGING_LEVEL) # Log all messages (DEBUG and above) to file
     file_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     file_handler.setFormatter(file_formatter)
@@ -45,3 +45,9 @@ def setup_project_logger(module_name):
     logger.addHandler(console_handler)
 
     return logger
+
+def setup_project_logger(module_name, project_type="classifier"):
+    if project_type == "classifier":
+        setup_classifier_project_logger(module_name)
+    else:
+        raise ValueError(f"Invalid project type: {project_type}")

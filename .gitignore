@@ -1,4 +1,4 @@
-fin_summary_gen/
+.venv
 __pycache__/
 secrets.toml
 .vscode/

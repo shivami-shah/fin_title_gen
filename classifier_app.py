@@ -1,4 +1,4 @@
-from excel_data_extractor import ExcelProcessor
+from classifier_excel_data_extractor import ExcelProcessor
 
 def extract_data():
     processor = ExcelProcessor()
