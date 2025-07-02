@@ -11,7 +11,7 @@ from classifier_config import (
     MAX_RETRIES, RETRY_DELAY_SECONDS, BATCH_SIZE, CONCURRENT_REQUESTS,
     MODEL_OUTPUT_DIR, OPENAI_API_KEY, PROMPT_TEMPLATE, PROCESSED_DATA_DIR,
     PROCESSED_CSV_NAME, FT_MODEL_OUTPUT_CSV_NAME, DEFAULT_MODEL_OUTPUT_CSV_NAME,
-    FT_MODEL, DEFAULT_MODEL
+    FT_MODEL, DEFAULT_MODEL, COLUMN_NAMES
 )
 from project_logger import setup_project_logger
 
@@ -24,7 +24,7 @@ class DataLoader:
     """
     def __init__(self, logger):
         self.logger = logger
-        self.fieldnames = ['title', 'user', 'model'] # Standard fields for processed data
+        self.fieldnames = COLUMN_NAMES # Standard fields for processed data
 
     def read_input_csv(self, file_path):
         """
@@ -36,7 +36,7 @@ class DataLoader:
 
         Returns:
             list: A list of dictionaries, where each dictionary contains
-                  'title' (for model input) and 'user' (actual label).
+                  'Title' (for model input) and 'user' (actual label).
         """
         extracted_data = []
         try:
@@ -212,9 +212,9 @@ class Classifier:
             else:
                 self.logger.info(f"Successfully processed item {original_index + 1}.")
                 return {
-                    "title": title_input,
-                    "user": user,
-                    "model": model_output.strip() # Strip whitespace from model output
+                    COLUMN_NAMES[0] : title_input,
+                    COLUMN_NAMES[1] : user,
+                    COLUMN_NAMES[2] : model_output.strip() # Strip whitespace from model output
                 }
 
     async def classify_titles(self, input_data_list, output_csv_file):
@@ -231,8 +231,7 @@ class Classifier:
         """
         logger.info(f"Shivami:{output_csv_file}")
         existing_results = self.data_loader.load_existing_results(output_csv_file)
-        processed_titles = {item['title'] for item in existing_results if 'title' in item}
-        logger.info(f"Shivami:{len(processed_titles)}")
+        processed_titles = {item['Title'] for item in existing_results if 'Title' in item}
 
         items_to_process = [item for item in input_data_list if item['title'] not in processed_titles]
 
@@ -353,7 +352,6 @@ class MetricsReporter:
             self.logger.error(f"Unique predicted labels: {y_pred.unique()}")
         except Exception as e:
             self.logger.error(f"An unexpected error occurred during metrics generation: {e}", exc_info=True)
-
 
 class DataProcessor:
 

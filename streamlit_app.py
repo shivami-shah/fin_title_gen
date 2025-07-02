@@ -1,8 +1,9 @@
 import streamlit as st
 import pandas as pd
 import io
-import os 
+import os
 from streamlit_helper import save_uploaded_file_and_extract, run_classification_and_load_output, to_excel_bytes
+from classifier_config import COLUMN_NAMES
 
 st.set_page_config(layout="wide", page_title="Classifier App")
 
@@ -88,9 +89,9 @@ if not st.session_state['edited_df'].empty:
     current_df = st.session_state['edited_df'].copy()
 
     # Determine which columns to display
-    display_columns = ['title', 'model']
-    if st.session_state['is_test_selected'] and 'user' in current_df.columns:
-        display_columns.insert(1, 'user') # Insert 'user' after 'title'
+    display_columns = [COLUMN_NAMES[0], COLUMN_NAMES[2]]
+    if st.session_state['is_test_selected'] and COLUMN_NAMES[1] in current_df.columns:
+        display_columns.insert(1, COLUMN_NAMES[1])
 
     # Filter current_df to only include display_columns
     current_df_for_display = current_df[display_columns]
@@ -107,9 +108,9 @@ if not st.session_state['edited_df'].empty:
     st.subheader("Column Filters")
     
     # Define columns for which filters should be shown
-    filter_cols = ['model']
-    if st.session_state['is_test_selected'] and 'user' in current_df.columns:
-        filter_cols.append('user')
+    filter_cols = [COLUMN_NAMES[2]]
+    if st.session_state['is_test_selected'] and COLUMN_NAMES[1] in current_df.columns:
+        filter_cols.append(COLUMN_NAMES[1])
     
     for col in filter_cols:
         if col in current_df_for_display.columns: # Ensure the column exists in the displayed data
@@ -145,6 +146,7 @@ if not st.session_state['edited_df'].empty:
         current_df_for_display, # Pass the column-filtered DataFrame here
         num_rows="dynamic",  # Allows adding/deleting rows
         use_container_width=True,
+        hide_index=False,
         key="data_editor_main" # A unique key for this widget
     )
     # Update the session state with the latest edited data
