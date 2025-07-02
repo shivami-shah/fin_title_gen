@@ -24,19 +24,19 @@ class DataLoader:
     """
     def __init__(self, logger):
         self.logger = logger
-        self.fieldnames = ['title', 'user_output', 'model_output'] # Standard fields for processed data
+        self.fieldnames = ['title', 'user', 'model'] # Standard fields for processed data
 
     def read_input_csv(self, file_path):
         """
         Reads a CSV file with headers: source_website, title, url, selected, date.
-        Extracts 'title' for model input and 'selected' for user_output (actual label).
+        Extracts 'title' for model input and 'selected' for user (actual label).
 
         Args:
             file_path (str): The path to the input CSV file.
 
         Returns:
             list: A list of dictionaries, where each dictionary contains
-                  'title' (for model input) and 'user_output' (actual label).
+                  'title' (for model input) and 'user' (actual label).
         """
         extracted_data = []
         try:
@@ -55,7 +55,7 @@ class DataLoader:
                     
                     extracted_data.append({
                         'title': title,
-                        'user_output': selected
+                        'user': selected
                     })
             self.logger.info(f"Successfully extracted {len(extracted_data)} records from '{file_path}'.")
         except FileNotFoundError:
@@ -199,11 +199,11 @@ class Classifier:
         """Helper to process a single item with API call."""
         async with self.semaphore:
             title_input = item['title']
-            user_output = item['user_output']
+            user = item['user']
             
             message = self.prompt_template + title_input
 
-            self.logger.info(f"Processing item {original_index + 1} (Title: '{title_input[:50]}...')")
+            self.logger.info(f"Processing item {original_index + 1}")
             model_output = await self.api_manager.chat_completion(message)
 
             if model_output is None:
@@ -213,8 +213,8 @@ class Classifier:
                 self.logger.info(f"Successfully processed item {original_index + 1}.")
                 return {
                     "title": title_input,
-                    "user_output": user_output,
-                    "model_output": model_output.strip() # Strip whitespace from model output
+                    "user": user,
+                    "model": model_output.strip() # Strip whitespace from model output
                 }
 
     async def classify_titles(self, input_data_list, output_csv_file):
@@ -223,14 +223,16 @@ class Classifier:
         Includes checkpointing to save data periodically and resumption logic.
 
         Args:
-            input_data_list (list): List of dictionaries with 'title' and 'user_output'.
+            input_data_list (list): List of dictionaries with 'title' and 'user'.
             output_csv_file (str): The path to the CSV file where results will be written.
 
         Returns:
             list: The combined output after processing.
         """
+        logger.info(f"Shivami:{output_csv_file}")
         existing_results = self.data_loader.load_existing_results(output_csv_file)
         processed_titles = {item['title'] for item in existing_results if 'title' in item}
+        logger.info(f"Shivami:{len(processed_titles)}")
 
         items_to_process = [item for item in input_data_list if item['title'] not in processed_titles]
 
@@ -288,18 +290,18 @@ class MetricsReporter:
             self.logger.error(f"Error reading CSV for metrics generation from '{output_csv_file}': {e}", exc_info=True)
             return
 
-        if 'user_output' not in df.columns or 'model_output' not in df.columns:
-            self.logger.error(f"Required columns 'user_output' and 'model_output' not found in '{output_csv_file}'.")
+        if 'user' not in df.columns or 'model' not in df.columns:
+            self.logger.error(f"Required columns 'user' and 'model' not found in '{output_csv_file}'.")
             return
 
         # Normalize labels and filter for 'Selected' and 'Not Selected'
-        df['user_output'] = df['user_output'].str.strip()
-        df['model_output'] = df['model_output'].str.strip()
+        df['user'] = df['user'].str.strip()
+        df['model'] = df['model'].str.strip()
         
         before_count = len(df)
         df_filtered = df[
-            (df['user_output'].isin(["Selected", "Not Selected"])) &
-            (df['model_output'].isin(["Selected", "Not Selected"]))
+            (df['user'].isin(["Selected", "Not Selected"])) &
+            (df['model'].isin(["Selected", "Not Selected"]))
         ].copy() # Use .copy() to avoid SettingWithCopyWarning
         after_count = len(df_filtered)
         
@@ -309,8 +311,8 @@ class MetricsReporter:
             self.logger.warning("No valid data points remaining after filtering for 'Selected' and 'Not Selected' labels. Cannot generate metrics.")
             return
 
-        y_true = df_filtered['user_output']
-        y_pred = df_filtered['model_output']
+        y_true = df_filtered['user']
+        y_pred = df_filtered['model']
         
         # Define target names and labels explicitly for consistent reporting
         target_names = ['Not Selected', 'Selected']

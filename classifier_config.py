@@ -26,7 +26,7 @@ MODEL_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 OPENAI_API_KEY = st.secrets['openai_api']['API_KEY']
 PROMPT_TEMPLATE = st.secrets['openai_api']['TITLE_CLASSIFICATION_INSTRUCTION']
 FT_MODEL = "ft:gpt-4o-mini-2024-07-18:utilizeai:title-classification-balanced:Bmcz4fNK"
-DEFAULT_MODEL = "chatgpt-4o-latest"
+DEFAULT_MODEL = "gpt-4o-mini"
 BATCH_SIZE = 100  # Number of records to process before saving to CSV
 CONCURRENT_REQUESTS = 10 # Number of API requests to make concurrently within a batch
 MAX_RETRIES = 5   # Maximum number of retries for an API call per request
