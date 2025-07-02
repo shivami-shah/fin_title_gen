@@ -2,8 +2,11 @@ import streamlit as st
 import pandas as pd
 import io
 import os
-from streamlit_helper import save_uploaded_file_and_extract, run_classification_and_load_output, to_excel_bytes
+from streamlit_helper import (
+    save_uploaded_file_and_extract, run_classification_and_load_output, 
+    to_excel_bytes, clear_raw_data_directory)
 from classifier_config import COLUMN_NAMES
+from streamlit.runtime.scriptrunner.script_runner import RerunException
 
 st.set_page_config(layout="wide", page_title="Classifier App")
 
@@ -19,13 +22,29 @@ if 'is_test_selected' not in st.session_state:
 
 st.title("AI News Curation")
 
+# Function to reset the application state
+def reset_app_state():
+    clear_raw_data_directory()
+    st.session_state['processed_df'] = pd.DataFrame()
+    st.session_state['edited_df'] = pd.DataFrame()
+    st.session_state['extracted_file_name'] = None
+    st.session_state['is_test_selected'] = False
+    try:
+        st.rerun() # Rerun the app to reflect the changes
+    except RerunException:
+        pass
+
+disable_buttons = not st.session_state['edited_df'].empty
+
 # --- 1. User uploads an Excel file and triggers extraction ---
 st.header("1. Upload Excel File")
 uploaded_file = st.file_uploader("Choose an Excel file", type=["xlsx", "xls"], key="excel_uploader")
 
 if uploaded_file is not None:
     if st.session_state['extracted_file_name'] != uploaded_file.name:
-        if st.button(f"Extract '{uploaded_file.name}'", key="extract_button_new"):
+        if st.button(f"Extract '{uploaded_file.name}'", 
+                     key="extract_button_new",
+                     disabled=disable_buttons):
             with st.spinner(f"Extracting titles from {uploaded_file.name}..."):
                 extraction_success = save_uploaded_file_and_extract(uploaded_file)
                 if extraction_success:
@@ -37,7 +56,9 @@ if uploaded_file is not None:
                     st.error("Data extraction failed.")
     else:
         st.info(f"'{uploaded_file.name}' is ready for classification.")
-        if st.button(f"Re-extract '{uploaded_file.name}'", key="extract_button_re"):
+        if st.button(f"Re-extract '{uploaded_file.name}'",
+                     key="extract_button_re",
+                     disabled=disable_buttons):
             with st.spinner(f"Re-extracting titles from {uploaded_file.name}..."):
                 extraction_success = save_uploaded_file_and_extract(uploaded_file)
                 if extraction_success:
@@ -59,20 +80,22 @@ if st.session_state['extracted_file_name'] is not None:
             ("Base Model", "Fine-tuned Model"),
             key="model_selection",
             index=0,
-            help="Choose 'Base Model' or 'Fine-tuned Model'"
+            help="Choose 'Base Model' or 'Fine-tuned Model'",
+            disabled=disable_buttons
         )
     with col2:
         generate_report = st.checkbox(
             "Evaluate",
             value=st.session_state['is_test_selected'],
             key="generate_report_checkbox",
-            help="Check this if the uploaded file is a test file and you want a metrics report."
+            help="Check this if the uploaded file is a test file and you want a metrics report.",
+            disabled=disable_buttons
         )
 
     is_base_model = (model_choice == "Base Model")
     st.session_state['is_test_selected'] = generate_report
-
-    if st.button("Classify", key="process_button"):
+    
+    if st.button("Classify", key="process_button", disabled=disable_buttons):
         st.session_state['processed_df'] = run_classification_and_load_output(is_test=st.session_state['is_test_selected'], is_base_model=is_base_model)
         st.session_state['edited_df'] = st.session_state['processed_df'].copy()
 
@@ -145,3 +168,10 @@ if not st.session_state['edited_df'].empty:
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         help="Click to download the currently displayed and edited data as an Excel file."
     )
+
+    # --- New: Process Another File Button ---
+    st.markdown("---") # Add a separator for better visual grouping
+    st.subheader("Process Another File")
+    if st.button("Process Another File", key="process_another_button"):
+        reset_app_state()
+        st.success("Application reset. Please upload a new file.")
