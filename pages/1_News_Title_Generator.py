@@ -1,12 +1,8 @@
 from typing import List
 import streamlit as st
-import summary_streamlit_helper as sh
+import generator_streamlit_helper as sh
 
 # --- Streamlit App ---
-# st.set_page_config(page_title="LLM Title Generator POC", layout="centered")
-# st.title("LLM-Powered Title Generator")
-
-
 def on_model_selection_change():
     if st.session_state.model_selector == "Open AI - Finnovate Research":
         st.session_state.fine_tuned_model = True
@@ -131,7 +127,7 @@ def save_editable_title():
         )
 
 
-def main():
+def title_generator_app_logic():
     tab1, tab2 = st.tabs(["Title Generation", "Generated Titles"])
     
     with tab1:
@@ -144,6 +140,4 @@ def main():
         st.header("Generated Titles")    
         sh.read_from_db()
 
-        
-if __name__ == "__main__":
-    main()
+title_generator_app_logic()

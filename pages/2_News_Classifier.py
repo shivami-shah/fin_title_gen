@@ -6,9 +6,9 @@ from classifier_streamlit_helper import (
     save_uploaded_file_and_extract, run_classification_and_load_output, 
     to_excel_bytes, clear_raw_data_directory)
 from classifier_config import COLUMN_NAMES
-from streamlit.runtime.scriptrunner.script_runner import RerunException
+# from streamlit.runtime.scriptrunner.script_runner import RerunException
 
-def main():
+def classifier_app_logic():
     # st.set_page_config(layout="wide", page_title="Classifier App")
     # Initialize session state for data persistence
     if 'processed_df' not in st.session_state:
@@ -19,6 +19,8 @@ def main():
         st.session_state['extracted_file_name'] = None
     if 'is_test_selected' not in st.session_state:
         st.session_state['is_test_selected'] = False
+    if 'file_uploader_key' not in st.session_state:
+        st.session_state['file_uploader_key'] = 0
 
     st.title("LLM-Powered News Curation")
 
@@ -29,16 +31,17 @@ def main():
         st.session_state['edited_df'] = pd.DataFrame()
         st.session_state['extracted_file_name'] = None
         st.session_state['is_test_selected'] = False
-        try:
-            st.rerun() # Rerun the app to reflect the changes
-        except RerunException:
-            pass
+        st.session_state['file_uploader_key'] += 1
 
     disable_buttons = not st.session_state['edited_df'].empty
 
     # --- 1. User uploads an Excel file and triggers extraction ---
     st.header("1. Upload Excel File")
-    uploaded_file = st.file_uploader("Choose an Excel file", type=["xlsx", "xls"], key="excel_uploader")
+    uploaded_file = st.file_uploader(
+        "Choose an Excel file",
+        type=["xlsx", "xls"],
+        key=f"excel_uploader_{st.session_state['file_uploader_key']}" # Use the dynamic key here
+    )
 
     if uploaded_file is not None:
         if st.session_state['extracted_file_name'] != uploaded_file.name:
@@ -169,9 +172,11 @@ def main():
             help="Click to download the currently displayed and edited data as an Excel file."
         )
 
-        # --- New: Process Another File Button ---
+        # --- Process Another File Button ---
         st.markdown("---") # Add a separator for better visual grouping
         st.subheader("Process Another File")
         if st.button("Process Another File", key="process_another_button"):
             reset_app_state()
             st.success("Application reset. Please upload a new file.")
+
+classifier_app_logic()

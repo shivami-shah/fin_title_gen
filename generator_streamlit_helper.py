@@ -1,7 +1,7 @@
 from typing import List
 import streamlit as st
-from summary_helper import generate_titles, save_to_database, get_content_from_url, read_from_database
-from summary_helper import OPENAI_MODEL, GEMINI_MODEL, PERPLEXITY_MODEL, OPENAI_FT_MODEL
+from generator_helper import generate_titles, save_to_database, get_content_from_url, read_from_database
+from generator_helper import OPENAI_MODEL, GEMINI_MODEL, PERPLEXITY_MODEL, OPENAI_FT_MODEL
 
 openai_api_key = st.secrets['openai_api']['API_KEY']
 openai_instruction = st.secrets['openai_api']['INSTRUCTION']
