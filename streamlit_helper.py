@@ -53,7 +53,7 @@ def save_uploaded_file_and_extract(uploaded_file):
             return False
     return False
 
-def run_classification_and_load_output(is_test, is_default_model):
+def run_classification_and_load_output(is_test, is_base_model):
     """
     Runs the data classification process and loads the appropriate output CSV.
     """
@@ -70,10 +70,10 @@ def run_classification_and_load_output(is_test, is_default_model):
             # Calling asyncio.run multiple times in the same thread can be problematic in some environments.
             # For a long-running production app, consider using Streamlit's @st.cache_resource
             # or a separate thread/process if asyncio conflicts arise.
-            process_data(is_test=is_test, is_default_model=is_default_model)
+            process_data(is_test=is_test, is_base_model=is_base_model)
         st.success("Title classification completed!")
         
-        output_csv_name = DEFAULT_MODEL_OUTPUT_CSV_NAME if is_default_model else FT_MODEL_OUTPUT_CSV_NAME
+        output_csv_name = DEFAULT_MODEL_OUTPUT_CSV_NAME if is_base_model else FT_MODEL_OUTPUT_CSV_NAME
         output_file_path = os.path.join(MODEL_OUTPUT_DIR, output_csv_name)
         
         if os.path.exists(output_file_path):

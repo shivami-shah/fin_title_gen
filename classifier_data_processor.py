@@ -9,9 +9,9 @@ from openai import AsyncOpenAI, APIError, RateLimitError, APITimeoutError
 # Import configurations and logger setup
 from classifier_config import (
     MAX_RETRIES, RETRY_DELAY_SECONDS, BATCH_SIZE, CONCURRENT_REQUESTS,
-    MODEL_OUTPUT_DIR, OPENAI_API_KEY, PROMPT_TEMPLATE, PROCESSED_DATA_DIR,
+    MODEL_OUTPUT_DIR, OPENAI_API_KEY, PROCESSED_DATA_DIR,
     PROCESSED_CSV_NAME, FT_MODEL_OUTPUT_CSV_NAME, DEFAULT_MODEL_OUTPUT_CSV_NAME,
-    FT_MODEL, DEFAULT_MODEL, COLUMN_NAMES
+    FT_MODEL, BASE_MODEL, FT_PROMPT_TEMPLATE, BASE_PROMPT_TEMPLATE, COLUMN_NAMES
 )
 from project_logger import setup_project_logger
 
@@ -289,13 +289,13 @@ class MetricsReporter:
             self.logger.error(f"Error reading CSV for metrics generation from '{output_csv_file}': {e}", exc_info=True)
             return
 
-        if 'user' not in df.columns or 'model' not in df.columns:
-            self.logger.error(f"Required columns 'user' and 'model' not found in '{output_csv_file}'.")
+        if COLUMN_NAMES[1] not in df.columns or COLUMN_NAMES[2] not in df.columns:
+            self.logger.error(f"Required columns '{COLUMN_NAMES[1]}' and '{COLUMN_NAMES[2]}' not found in '{output_csv_file}'.")
             return
 
         # Normalize labels and filter for 'Selected' and 'Not Selected'
-        df['user'] = df['user'].str.strip()
-        df['model'] = df['model'].str.strip()
+        df['user'] = df[COLUMN_NAMES[1]].str.strip()
+        df['model'] = df[COLUMN_NAMES[2]].str.strip()
         
         before_count = len(df)
         df_filtered = df[
@@ -361,8 +361,14 @@ class DataProcessor:
     def __init__(self):
         self.logger = setup_project_logger("data_processor")
         self.data_loader = DataLoader(self.logger)
-        self.api_manager = APIManager(OPENAI_API_KEY, FT_MODEL, MAX_RETRIES, RETRY_DELAY_SECONDS, self.logger)
-        self.classifier = Classifier(self.data_loader, self.api_manager, self.logger, PROMPT_TEMPLATE, BATCH_SIZE, CONCURRENT_REQUESTS)
+        self.base_prompt_template = BASE_PROMPT_TEMPLATE
+        self.ft_prompt_template = FT_PROMPT_TEMPLATE
+        self.base_model = BASE_MODEL
+        self.ft_model = FT_MODEL
+        model = self.ft_model
+        prompt_template = self.ft_prompt_template
+        self.api_manager = APIManager(OPENAI_API_KEY, model, MAX_RETRIES, RETRY_DELAY_SECONDS, self.logger)
+        self.classifier = Classifier(self.data_loader, self.api_manager, self.logger, prompt_template, BATCH_SIZE, CONCURRENT_REQUESTS)
         self.metrics_reporter = MetricsReporter(self.logger)
         self.input_file_path = os.path.join(PROCESSED_DATA_DIR, PROCESSED_CSV_NAME)
         self.ft_output_csv_file = os.path.join(MODEL_OUTPUT_DIR, FT_MODEL_OUTPUT_CSV_NAME)
@@ -372,7 +378,7 @@ class DataProcessor:
         os.makedirs(MODEL_OUTPUT_DIR, exist_ok=True)
 
 
-    async def run(self, is_test=False, is_default_model=False, limit_data=None):
+    async def run(self, is_test=False, is_base_model=False, limit_data=None):
         """
         Executes the main classification workflow.
 
@@ -398,13 +404,17 @@ class DataProcessor:
             
         self.logger.info(f"Total items to consider from source: {len(input_data_list)}")
         
-        if is_default_model:
-            self.api_manager.model = DEFAULT_MODEL
+        if is_base_model:
+            self.api_manager.model = self.base_model
+            self.classifier.prompt_template = self.base_prompt_template
+        else:
+            self.api_manager.model = self.ft_model
+            self.classifier.prompt_template = self.ft_prompt_template
 
         self.logger.info(f"Running classification with model '{self.api_manager.model}' on {len(input_data_list)} items.")
         
         # Pass input_data_list directly to classifier for processing
-        self.output_csv_file = self.default_output_csv_file if is_default_model else self.ft_output_csv_file
+        self.output_csv_file = self.default_output_csv_file if is_base_model else self.ft_output_csv_file
         
         final_processed_data = await self.classifier.classify_titles(input_data_list, self.output_csv_file)
         self.logger.info(f"Total items processed and saved in '{self.output_csv_file}': {len(final_processed_data)}")
