@@ -3,8 +3,8 @@ import streamlit as st
 import summary_streamlit_helper as sh
 
 # --- Streamlit App ---
-st.set_page_config(page_title="LLM Title Generator POC", layout="centered")
-st.title("LLM-Powered Title Generator")
+# st.set_page_config(page_title="LLM Title Generator POC", layout="centered")
+# st.title("LLM-Powered Title Generator")
 
 
 def on_model_selection_change():
@@ -16,6 +16,7 @@ def on_model_selection_change():
 
 
 def start_page():
+    st.title("LLM-Powered News Title Generator")
     if 'selected_input_source' not in st.session_state:
         st.session_state.selected_input_source = "summary"
     if 'selected_scoring_method' not in st.session_state:
