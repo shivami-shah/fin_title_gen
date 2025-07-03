@@ -282,7 +282,6 @@ def classifier_app_logic():
             else:
                 st.warning("Classification metrics report not found or could not be parsed.")
 
-
         base_df = st.session_state['edited_df']
 
         st.subheader("Analyze and Edit Data")
@@ -337,7 +336,15 @@ def classifier_app_logic():
     # --- 4. Save Edited Data ---
     if st.session_state['classification_completed'] and not st.session_state['edited_df'].empty and not st.session_state['reset_triggered']:
         st.header("4. Save Classified Titles")
-        excel_data_bytes = to_excel_bytes(st.session_state['edited_df'])
+        
+        download_columns = [COLUMN_NAMES[0], COLUMN_NAMES[2]] 
+        
+        if st.session_state['is_test_selected'] and COLUMN_NAMES[1] in st.session_state['edited_df'].columns:
+            download_columns.insert(1, COLUMN_NAMES[1]) 
+            
+        df_for_download = st.session_state['edited_df'][download_columns]
+        
+        excel_data_bytes = to_excel_bytes(df_for_download)
 
         st.download_button(
             label="Download as Excel",
