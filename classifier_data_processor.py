@@ -15,7 +15,7 @@ from classifier_config import (
 )
 from project_logger import setup_project_logger
 
-logger = setup_project_logger("title_classifier") # Module-specific logger
+logger = setup_project_logger("classifier_data_processor") # Module-specific logger
 
 class DataLoader:
     """

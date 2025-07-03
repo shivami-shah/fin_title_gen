@@ -6,7 +6,7 @@ import asyncio
 import io
 
 # Assuming these imports are available in the environment
-from classifier_app import extract_data, process_data
+from classifier_app import extract_data, process_data, read_from_database, save_to_database
 from classifier_config import (
     RAW_DATA_DIR, PROCESSED_DATA_DIR, PROCESSED_CSV_NAME, ENVIRONMENT,
     MODEL_OUTPUT_DIR, FT_MODEL_OUTPUT_CSV_NAME, DEFAULT_MODEL_OUTPUT_CSV_NAME
@@ -15,7 +15,7 @@ from project_logger import setup_project_logger
 
 # Initialize logger for the helper
 logger = setup_project_logger("streamlit_helper")
-
+    
 def clear_data_directory():
     """
     Deletes all files from the RAW_DATA_DIR.
@@ -45,7 +45,18 @@ def clear_data_directory():
     except Exception as e:
         logger.error(f"Error clearing MODEL_OUTPUT_DIR: {e}")
         st.error(f"Error clearing model output data directory: {e}")
-        
+
+def reset_app_state():
+    clear_data_directory()
+    st.session_state['processed_df'] = pd.DataFrame()
+    st.session_state['edited_df'] = pd.DataFrame()
+    st.session_state['extracted_file_name'] = None
+    st.session_state['is_test_selected'] = False
+    st.session_state['file_uploader_key'] += 1 # Increment to refresh file uploader
+    st.session_state['classification_completed'] = False
+    st.session_state['reset_triggered'] = True # Set the reset flag for the next run
+    st.session_state['is_saved'] = False
+   
 def save_uploaded_file_and_extract(uploaded_file):
     """
     Saves the uploaded Streamlit file to RAW_DATA_DIR and then
@@ -110,3 +121,24 @@ def to_excel_bytes(df):
         df.to_excel(writer, index=False, sheet_name='Sheet1')
     processed_data = output.getvalue()
     return processed_data
+
+def read_from_db():
+    with st.spinner("Loading history from database..."):
+        df = read_from_database()
+        if df.empty:
+            st.warning("No history found in the database.")
+        else:
+            st.subheader("Titles from Database:")
+            st.dataframe(df, use_container_width=True, hide_index=True)
+            st.markdown("---")
+            
+def handle_save_button_click():
+    with st.spinner("Saving selected title..."):
+        success = save_to_database(st.session_state['edited_df'])
+        if success:
+            st.success("Titles saved successfully!")
+            st.session_state['is_saved'] = True
+            reset_app_state()
+        else:
+            st.error("Failed to save the title. Try again later.")
+            st.session_state['is_saved'] = False

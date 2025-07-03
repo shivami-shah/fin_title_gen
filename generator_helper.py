@@ -17,7 +17,7 @@ credentials = ServiceAccountCredentials.from_json_keyfile_dict(
 )
 client = gspread.authorize(credentials)
 
-spreadsheet = client.open_by_key(st.secrets["google_service_account"]["spreadsheet_id"])
+spreadsheet = client.open_by_key(st.secrets["google_service_account"]["generator_spreadsheet_id"])
 worksheet = spreadsheet.worksheet("Titles")
 
 # Model names

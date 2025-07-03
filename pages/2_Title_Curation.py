@@ -4,12 +4,13 @@ import io
 import os
 from classifier_streamlit_helper import (
     save_uploaded_file_and_extract, run_classification_and_load_output,
-    to_excel_bytes, clear_data_directory)
+    to_excel_bytes, clear_data_directory, read_from_db,
+    reset_app_state, handle_save_button_click)
 from classifier_config import COLUMN_NAMES, MODEL_OUTPUT_DIR
 import matplotlib.pyplot as plt
 import re
 
-def classifier_app_logic():
+def start_page():
     # Initialize session state for data persistence
     if 'processed_df' not in st.session_state:
         st.session_state['processed_df'] = pd.DataFrame()
@@ -26,22 +27,10 @@ def classifier_app_logic():
     if 'reset_triggered' not in st.session_state:
         clear_data_directory()
         st.session_state['reset_triggered'] = False
+    if 'is_saved' not in st.session_state:
+        st.session_state['is_saved'] = False
 
-    st.title("AI-Powered Title Curation")
-
-    # Function to reset the application state
-    def reset_app_state():
-        clear_data_directory()
-        st.session_state['processed_df'] = pd.DataFrame()
-        st.session_state['edited_df'] = pd.DataFrame()
-        st.session_state['extracted_file_name'] = None
-        st.session_state['is_test_selected'] = False
-        st.session_state['file_uploader_key'] += 1 # Increment to refresh file uploader
-        st.session_state['classification_completed'] = False
-        st.session_state['reset_triggered'] = True # Set the reset flag for the next run
-
-    # Determine disable state based on whether classification has completed
-    disable_classify_and_evaluate = st.session_state['classification_completed']
+    st.title("AI-Powered Title Curation")    
 
     # --- 1. User uploads an Excel file and triggers extraction ---
     st.header("1. Upload Excel File")
@@ -53,20 +42,17 @@ def classifier_app_logic():
         key=f"excel_uploader_{st.session_state['file_uploader_key']}"
     )
 
-    # Now, process the uploaded_file based on the reset_triggered flag
     uploaded_file = None
     if st.session_state['reset_triggered']:
-        # If reset was triggered, we want the app to behave as if no file is uploaded for this run
-        st.session_state['reset_triggered'] = False # Consume the flag
-        # uploaded_file remains None, effectively clearing the previous file logic
+        st.session_state['reset_triggered'] = False
     else:
-        uploaded_file = temp_uploaded_file # Use the actual uploaded file if no reset was triggered
+        uploaded_file = temp_uploaded_file
 
     if uploaded_file is not None:
         if st.session_state['extracted_file_name'] != uploaded_file.name:
             if st.button(f"Extract '{uploaded_file.name}'",
                          key="extract_button_new",
-                         disabled=disable_classify_and_evaluate):
+                         disabled=st.session_state['classification_completed']):
                 with st.spinner(f"Extracting titles from {uploaded_file.name}..."):
                     extraction_success = save_uploaded_file_and_extract(uploaded_file)
                     if extraction_success:
@@ -80,7 +66,7 @@ def classifier_app_logic():
             st.info(f"'{uploaded_file.name}' is ready for classification.")
             if st.button(f"Re-extract '{uploaded_file.name}'",
                          key="extract_button_re",
-                         disabled=disable_classify_and_evaluate):
+                         disabled=st.session_state['classification_completed']):
                 with st.spinner(f"Re-extracting titles from {uploaded_file.name}..."):
                     extraction_success = save_uploaded_file_and_extract(uploaded_file)
                     if extraction_success:
@@ -91,6 +77,7 @@ def classifier_app_logic():
                     else:
                         st.error("Data re-extraction failed.")
 
+def handle_input_and_classify():
     # --- 2. User selects model and report options, then triggers classification ---
     if st.session_state['extracted_file_name'] is not None and not st.session_state['reset_triggered']:
         st.header("2. Classify Titles")
@@ -103,7 +90,7 @@ def classifier_app_logic():
                 key="model_selection",
                 index=1,
                 help="Choose 'Open AI' or 'Open AI - Finnovate Research'",
-                disabled=disable_classify_and_evaluate
+                disabled=st.session_state['classification_completed']
             )
         with col2:
             generate_report = st.checkbox(
@@ -111,7 +98,7 @@ def classifier_app_logic():
                 value=st.session_state['is_test_selected'],
                 key="generate_report_checkbox",
                 help="Check this if the uploaded file is a test file and you want a metrics report.",
-                disabled=disable_classify_and_evaluate
+                disabled=st.session_state['classification_completed']
             )
 
         is_base_model = (model_choice == "Open AI")
@@ -124,90 +111,90 @@ def classifier_app_logic():
 
         if st.button("Classify", key="process_button",
                      on_click=on_classify_click,
-                     disabled=disable_classify_and_evaluate):
+                     disabled=st.session_state['classification_completed']):
             pass
 
-    # Function to load and parse the classification metrics report
-    def load_classification_metrics_report():
-        report_path = MODEL_OUTPUT_DIR / "classification_metrics_report.txt"
-        metrics = {}
-        if os.path.exists(report_path):
-            with open(report_path, 'r') as f:
-                content = f.read()
-            
-            # Parse Classification Metrics (existing code)
-            metrics_start = content.find("Classification Metrics:")
-            confusion_matrix_start = content.find("Confusion Matrix:")
-            classification_report_start = content.find("Classification Report:")
-
-            if metrics_start != -1 and confusion_matrix_start != -1:
-                metrics_section = content[metrics_start : confusion_matrix_start].strip()
-                metrics['metrics'] = metrics_section.replace("Classification Metrics:\n", "").strip()
-            
-            if confusion_matrix_start != -1 and classification_report_start != -1:
-                confusion_matrix_section = content[confusion_matrix_start : classification_report_start].strip()
-                metrics['confusion_matrix_raw'] = confusion_matrix_section.replace("Confusion Matrix:\n", "").strip()
-
-                # --- Existing CODE FOR PARSING CONFUSION MATRIX ---
-                lines = metrics['confusion_matrix_raw'].strip().split('\n')
-                if len(lines) == 2:
-                    try:
-                        row1_str = lines[0].strip('[] ').split()
-                        row2_str = lines[1].strip('[] ').split()
-
-                        if len(row1_str) == 2 and len(row2_str) == 2:
-                            metrics['tn'] = int(row1_str[0])
-                            metrics['fp'] = int(row1_str[1])
-                            metrics['fn'] = int(row2_str[0])
-                            metrics['tp'] = int(row2_str[1])
-                    except (ValueError, IndexError):
-                        st.error("Error parsing confusion matrix values.")
-                        metrics['tn'], metrics['fp'], metrics['fn'], metrics['tp'] = None, None, None, None
-                # --- END Existing CODE ---
-
-            if classification_report_start != -1:
-                classification_report_section_raw = content[classification_report_start:].replace("Classification Report:\n", "").strip()
-                metrics['classification_report_raw'] = classification_report_section_raw 
-
-                report_data = []
-                lines = classification_report_section_raw.split('\n')
-                
-                class_pattern = re.compile(r'^\s*(\w+\s*\w*)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+(\d+)$')
-                accuracy_pattern = re.compile(r'^\s*accuracy\s+([\d.]+)\s+(\d+)$')
-
-                data_lines = [line for line in lines if line.strip() and not line.strip().startswith('precision')]
-
-                for line in data_lines:
-                    match_class = class_pattern.match(line)
-                    if match_class:
-                        label, precision, recall, f1, support = match_class.groups()
-                        # --- MODIFIED: Exclude 'macro avg' and 'weighted avg' rows ---
-                        if label.strip().lower() not in ['macro avg', 'weighted avg']:
-                            report_data.append({
-                                'Metric': label.strip(),
-                                'Precision': float(precision),
-                                'Recall': float(recall),
-                                'F1-Score': float(f1),
-                                'Support': int(support)
-                            })
-                    else:
-                        match_accuracy = accuracy_pattern.match(line)
-                        if match_accuracy:
-                            # --- MODIFIED: Skip 'Accuracy' row entirely ---
-                            pass # Do not append the accuracy row to report_data
-                
-                if report_data:
-                    df_report = pd.DataFrame(report_data)
-                    for col in ['Precision', 'Recall', 'F1-Score']:
-                        df_report[col] = pd.to_numeric(df_report[col], errors='coerce')
-                    df_report['Support'] = pd.to_numeric(df_report['Support'], errors='coerce', downcast='integer')
-                    
-                    metrics['classification_report_df'] = df_report
-                else:
-                    metrics['classification_report_df'] = pd.DataFrame(columns=['Metric', 'Precision', 'Recall', 'F1-Score', 'Support'])
+def load_classification_metrics_report():
+    report_path = MODEL_OUTPUT_DIR / "classification_metrics_report.txt"
+    metrics = {}
+    if os.path.exists(report_path):
+        with open(report_path, 'r') as f:
+            content = f.read()
         
-        return metrics
+        # Parse Classification Metrics (existing code)
+        metrics_start = content.find("Classification Metrics:")
+        confusion_matrix_start = content.find("Confusion Matrix:")
+        classification_report_start = content.find("Classification Report:")
 
+        if metrics_start != -1 and confusion_matrix_start != -1:
+            metrics_section = content[metrics_start : confusion_matrix_start].strip()
+            metrics['metrics'] = metrics_section.replace("Classification Metrics:\n", "").strip()
+        
+        if confusion_matrix_start != -1 and classification_report_start != -1:
+            confusion_matrix_section = content[confusion_matrix_start : classification_report_start].strip()
+            metrics['confusion_matrix_raw'] = confusion_matrix_section.replace("Confusion Matrix:\n", "").strip()
+
+            # --- Existing CODE FOR PARSING CONFUSION MATRIX ---
+            lines = metrics['confusion_matrix_raw'].strip().split('\n')
+            if len(lines) == 2:
+                try:
+                    row1_str = lines[0].strip('[] ').split()
+                    row2_str = lines[1].strip('[] ').split()
+
+                    if len(row1_str) == 2 and len(row2_str) == 2:
+                        metrics['tn'] = int(row1_str[0])
+                        metrics['fp'] = int(row1_str[1])
+                        metrics['fn'] = int(row2_str[0])
+                        metrics['tp'] = int(row2_str[1])
+                except (ValueError, IndexError):
+                    st.error("Error parsing confusion matrix values.")
+                    metrics['tn'], metrics['fp'], metrics['fn'], metrics['tp'] = None, None, None, None
+            # --- END Existing CODE ---
+
+        if classification_report_start != -1:
+            classification_report_section_raw = content[classification_report_start:].replace("Classification Report:\n", "").strip()
+            metrics['classification_report_raw'] = classification_report_section_raw 
+
+            report_data = []
+            lines = classification_report_section_raw.split('\n')
+            
+            class_pattern = re.compile(r'^\s*(\w+\s*\w*)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+(\d+)$')
+            accuracy_pattern = re.compile(r'^\s*accuracy\s+([\d.]+)\s+(\d+)$')
+
+            data_lines = [line for line in lines if line.strip() and not line.strip().startswith('precision')]
+
+            for line in data_lines:
+                match_class = class_pattern.match(line)
+                if match_class:
+                    label, precision, recall, f1, support = match_class.groups()
+                    # --- MODIFIED: Exclude 'macro avg' and 'weighted avg' rows ---
+                    if label.strip().lower() not in ['macro avg', 'weighted avg']:
+                        report_data.append({
+                            'Metric': label.strip(),
+                            'Precision': float(precision),
+                            'Recall': float(recall),
+                            'F1-Score': float(f1),
+                            'Support': int(support)
+                        })
+                else:
+                    match_accuracy = accuracy_pattern.match(line)
+                    if match_accuracy:
+                        # --- MODIFIED: Skip 'Accuracy' row entirely ---
+                        pass # Do not append the accuracy row to report_data
+            
+            if report_data:
+                df_report = pd.DataFrame(report_data)
+                for col in ['Precision', 'Recall', 'F1-Score']:
+                    df_report[col] = pd.to_numeric(df_report[col], errors='coerce')
+                df_report['Support'] = pd.to_numeric(df_report['Support'], errors='coerce', downcast='integer')
+                
+                metrics['classification_report_df'] = df_report
+            else:
+                metrics['classification_report_df'] = pd.DataFrame(columns=['Metric', 'Precision', 'Recall', 'F1-Score', 'Support'])
+    
+    return metrics
+    
+def display_results():
     # --- 3. Display, Filter, Search, and Edit Data ---
     if st.session_state['classification_completed'] and not st.session_state['edited_df'].empty and not st.session_state['reset_triggered']:
         st.header("3. Classification Result")
@@ -334,30 +321,34 @@ def classifier_app_logic():
             for col in display_columns:
                 st.session_state['edited_df'].loc[edited_view.index, col] = edited_view[col]
 
+def save_data():    
     # --- 4. Save Edited Data ---
     if st.session_state['classification_completed'] and not st.session_state['edited_df'].empty and not st.session_state['reset_triggered']:
         st.header("4. Save Classified Titles")
         
-        download_columns = [COLUMN_NAMES[0], COLUMN_NAMES[2]] 
-        
-        if st.session_state['is_test_selected'] and COLUMN_NAMES[1] in st.session_state['edited_df'].columns:
-            download_columns.insert(1, COLUMN_NAMES[1]) 
+        if not st.session_state['is_test_selected']:
+            st.session_state['edited_df'][COLUMN_NAMES[1]] = "Not Classified"
             
-        df_for_download = st.session_state['edited_df'][download_columns]
-        
-        excel_data_bytes = to_excel_bytes(df_for_download)
-
-        st.download_button(
-            label="Download as Excel",
-            data=excel_data_bytes,
-            file_name="classified_and_edited_data.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            help="Click to download the currently displayed and edited data as an Excel file."
-        )
-
-        st.markdown("---")
-        st.subheader("Reset")
-        if st.button("Reset", key="process_another_button", on_click=reset_app_state):
+        if st.button("Save Classified Titles", type="primary", on_click=handle_save_button_click):
             pass
 
+        reset_text = "Reset" if st.session_state['is_saved'] else "Process Another File"
+        st.markdown("---")
+        st.subheader(reset_text)
+        if st.button(reset_text, key="process_another_button", on_click=reset_app_state):
+            pass
+
+def classifier_app_logic():
+    tab1, tab2 = st.tabs(["Title Curation", "Curated Titles"])
+    
+    with tab1:
+        start_page()
+        handle_input_and_classify()
+        display_results()
+        save_data()
+        
+    with tab2:
+        st.header("Curated Titles")    
+        read_from_db()
+    
 classifier_app_logic()
