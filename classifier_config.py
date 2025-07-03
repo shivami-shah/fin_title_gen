@@ -5,6 +5,7 @@ import streamlit as st
 
 LOGGING_LEVEL = logging.DEBUG
 ENVIRONMENT = st.secrets["ENVIRONMENT"]
+PURPOSE = st.secrets["PURPOSE"]
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 DATA_DIR = PROJECT_ROOT / "classifier_data"

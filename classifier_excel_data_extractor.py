@@ -107,8 +107,8 @@ class ExcelProcessor:
                     break
 
                 is_selected = "Selected" if self._is_cell_highlighted(title_cell) else "Not Selected"
-                if is_selected == "Selected":
-                     self.logger.info(f"Title '{title}' for '{source_website}' at row {row_idx} is selected.")
+                # if is_selected == "Selected":
+                #     self.logger.info(f"Title '{title}' for '{source_website}' at row {row_idx} is selected.")
 
 
                 if title or url: # Only add if there's at least a title or URL
