@@ -4,7 +4,7 @@ import io
 import os
 from classifier_streamlit_helper import (
     save_uploaded_file_and_extract, run_classification_and_load_output,
-    to_excel_bytes, clear_raw_data_directory)
+    to_excel_bytes, clear_data_directory)
 from classifier_config import COLUMN_NAMES, MODEL_OUTPUT_DIR
 import matplotlib.pyplot as plt
 import re
@@ -24,13 +24,14 @@ def classifier_app_logic():
     if 'classification_completed' not in st.session_state:
         st.session_state['classification_completed'] = False
     if 'reset_triggered' not in st.session_state:
+        clear_data_directory()
         st.session_state['reset_triggered'] = False
 
     st.title("AI-Powered Title Curation")
 
     # Function to reset the application state
     def reset_app_state():
-        clear_raw_data_directory()
+        clear_data_directory()
         st.session_state['processed_df'] = pd.DataFrame()
         st.session_state['edited_df'] = pd.DataFrame()
         st.session_state['extracted_file_name'] = None

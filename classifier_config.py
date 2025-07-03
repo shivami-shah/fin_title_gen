@@ -4,9 +4,9 @@ import logging
 import streamlit as st
 
 LOGGING_LEVEL = logging.DEBUG
+ENVIRONMENT = st.secrets["ENVIRONMENT"]
 
 PROJECT_ROOT = Path(__file__).resolve().parent
-
 DATA_DIR = PROJECT_ROOT / "classifier_data"
 RAW_DATA_DIR = DATA_DIR / "daily_trackers"
 PROCESSED_DATA_DIR = DATA_DIR / "processed"

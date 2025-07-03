@@ -8,7 +8,7 @@ import io
 # Assuming these imports are available in the environment
 from classifier_app import extract_data, process_data
 from classifier_config import (
-    RAW_DATA_DIR, PROCESSED_DATA_DIR, PROCESSED_CSV_NAME,
+    RAW_DATA_DIR, PROCESSED_DATA_DIR, PROCESSED_CSV_NAME, ENVIRONMENT,
     MODEL_OUTPUT_DIR, FT_MODEL_OUTPUT_CSV_NAME, DEFAULT_MODEL_OUTPUT_CSV_NAME
 )
 from project_logger import setup_project_logger
@@ -16,7 +16,7 @@ from project_logger import setup_project_logger
 # Initialize logger for the helper
 logger = setup_project_logger("streamlit_helper")
 
-def clear_raw_data_directory():
+def clear_data_directory():
     """
     Deletes all files from the RAW_DATA_DIR.
     """
@@ -32,7 +32,20 @@ def clear_raw_data_directory():
     except Exception as e:
         logger.error(f"Error clearing RAW_DATA_DIR: {e}")
         st.error(f"Error clearing raw data directory: {e}")
-
+        
+    try:
+        if os.path.exists(MODEL_OUTPUT_DIR) and ENVIRONMENT=="prod":
+            for f in os.listdir(MODEL_OUTPUT_DIR):
+                file_path = os.path.join(MODEL_OUTPUT_DIR, f)
+                if os.path.isfile(file_path):
+                    os.remove(file_path)
+            logger.info(f"Cleared all files from {MODEL_OUTPUT_DIR}")
+        else:
+            logger.info(f"MODEL_OUTPUT_DIR {MODEL_OUTPUT_DIR} does not exist. No files to clear.")
+    except Exception as e:
+        logger.error(f"Error clearing MODEL_OUTPUT_DIR: {e}")
+        st.error(f"Error clearing model output data directory: {e}")
+        
 def save_uploaded_file_and_extract(uploaded_file):
     """
     Saves the uploaded Streamlit file to RAW_DATA_DIR and then
