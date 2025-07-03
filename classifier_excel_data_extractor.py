@@ -103,12 +103,12 @@ class ExcelProcessor:
                 # If both title and URL are empty, assume no more articles in this column
                 # This prevents processing empty rows at the end of a column block
                 if title is None and url is None:
-                    self.logger.debug(f"No more data in column for source '{source_website}' from row {row_idx}. Breaking.")
+                    # self.logger.info(f"No more data in column for source '{source_website}' from row {row_idx}. Breaking.")
                     break
 
                 is_selected = "Selected" if self._is_cell_highlighted(title_cell) else "Not Selected"
                 if is_selected == "Selected":
-                     self.logger.debug(f"Title '{title}' for '{source_website}' at row {row_idx} is selected.")
+                     self.logger.info(f"Title '{title}' for '{source_website}' at row {row_idx} is selected.")
 
 
                 if title or url: # Only add if there's at least a title or URL
@@ -119,7 +119,7 @@ class ExcelProcessor:
                         'selected': is_selected,
                         'date': sheet_name # Use sheet name as date for the record
                     })
-                    self.logger.debug(f"Extracted: '{title}' from '{source_website}' on sheet '{sheet_name}'.")
+                    # self.logger.info(f"Extracted: '{title}' from '{source_website}' on sheet '{sheet_name}'.")
         return articles
 
     def process_single_excel_file(self, excel_file_path, output_csv_file_path):

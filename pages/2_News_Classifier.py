@@ -134,12 +134,14 @@ def classifier_app_logic():
 
         search_term = st.text_input("Search in Titles:", "")
 
-        user_filter = st.multiselect(
-            "Filter by User Selection",
-            options=base_df[COLUMN_NAMES[1]].dropna().unique().tolist()
-            if COLUMN_NAMES[1] in base_df.columns else [],
-            default=[]
-        )
+        user_filter = []
+        if st.session_state['is_test_selected']:
+            user_filter = st.multiselect(
+                "Filter by User Selection",
+                options=base_df[COLUMN_NAMES[1]].dropna().unique().tolist()
+                if COLUMN_NAMES[1] in base_df.columns else [],
+                default=[]
+            )
 
         ai_filter = st.multiselect(
             "Filter by AI Selection",
