@@ -6,9 +6,10 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("Welcome to the Unified LLM-Powered News Tool")
-st.write(
-    "Use the sidebar navigation to switch between the **News Classifier** and the "
-    "**News Title Generator**. Data may be lost if switched between these tools."
-)
+st.title("Finnovate Research AI Systems")
+
 st.markdown("---") # Add a separator for better visual grouping
+st.write(
+    "Use the sidebar navigation to switch between **Title Generation** system and the "
+    "**Title Curation** system."
+)
