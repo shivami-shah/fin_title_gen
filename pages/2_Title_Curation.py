@@ -326,17 +326,32 @@ def save_data():
     if st.session_state['classification_completed'] and not st.session_state['edited_df'].empty and not st.session_state['reset_triggered']:
         st.header("4. Save Classified Titles")
         
-        if not st.session_state['is_test_selected']:
+        download_columns = [COLUMN_NAMES[0], COLUMN_NAMES[2]]
+        
+        if st.session_state['is_test_selected'] and COLUMN_NAMES[1] in st.session_state['edited_df'].columns:
+            download_columns.insert(1, COLUMN_NAMES[1])
+        else:
             st.session_state['edited_df'][COLUMN_NAMES[1]] = "Not Classified"
             
-        if st.button("Save Classified Titles", type="primary", on_click=handle_save_button_click):
+        if st.button("Save To Database", type="primary", on_click=handle_save_button_click):
+            pass
+        
+        df_for_download = st.session_state['edited_df'][download_columns]
+        excel_data_bytes = to_excel_bytes(df_for_download)
+        
+        st.download_button(
+            label="Download as Excel",
+            data=excel_data_bytes,
+            file_name="classified_and_edited_data.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            help="Click to download the edited titles and classified data as an Excel file."
+        )
+
+        st.markdown("---")
+        st.subheader("Reset")
+        if st.button("Reset", key="process_another_button", on_click=reset_app_state):
             pass
 
-        reset_text = "Reset" if st.session_state['is_saved'] else "Process Another File"
-        st.markdown("---")
-        st.subheader(reset_text)
-        if st.button(reset_text, key="process_another_button", on_click=reset_app_state):
-            pass
 
 def classifier_app_logic():
     tab1, tab2 = st.tabs(["Title Curation", "Curated Titles"])
