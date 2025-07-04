@@ -30,17 +30,18 @@ def save_to_database(data) -> bool:
     Returns:
         bool: True if saving was successful, False otherwise.
     """
-    data["date"] = date.today().strftime("%Y-%m-%d")
+    data["Date"] = date.today().strftime("%Y-%m-%d")
     
     try:
         existing_data = read_from_database()
+        before_len = len(existing_data) + len(data)
         if existing_data.empty:
             combined_df = data
         else:
+            titles_to_drop = data[COLUMN_NAMES[0]][data[COLUMN_NAMES[0]].isin(existing_data[COLUMN_NAMES[0]])].unique()
+            existing_data = existing_data[~existing_data[COLUMN_NAMES[0]].isin(titles_to_drop)]
             combined_df = pd.concat([existing_data, data], ignore_index=True)
         
-        before_len = len(combined_df)
-        combined_df = combined_df.drop_duplicates(subset=[COLUMN_NAMES[0]])
         after_len = len(combined_df)
         if before_len != after_len:
             print(f"Removed {before_len - after_len} duplicate rows.")

@@ -21,27 +21,33 @@ def clear_data_directory():
     Deletes all files from the RAW_DATA_DIR.
     """
     try:
-        if os.path.exists(RAW_DATA_DIR):
-            for f in os.listdir(RAW_DATA_DIR):
-                file_path = os.path.join(RAW_DATA_DIR, f)
-                if os.path.isfile(file_path):
-                    os.remove(file_path)
-            logger.info(f"Cleared all files from {RAW_DATA_DIR}")
+        if ENVIRONMENT=="prod":
+            if os.path.exists(RAW_DATA_DIR):
+                for f in os.listdir(RAW_DATA_DIR):
+                    file_path = os.path.join(RAW_DATA_DIR, f)
+                    if os.path.isfile(file_path):
+                        os.remove(file_path)
+                logger.info(f"Cleared all files from {RAW_DATA_DIR}")
+            else:
+                logger.info(f"RAW_DATA_DIR {RAW_DATA_DIR} does not exist. No files to clear.")
         else:
-            logger.info(f"RAW_DATA_DIR {RAW_DATA_DIR} does not exist. No files to clear.")
+            logger.info("Environment is not 'prod'. No action taken for clearing raw data directory.")
     except Exception as e:
         logger.error(f"Error clearing RAW_DATA_DIR: {e}")
         st.error(f"Error clearing raw data directory: {e}")
         
     try:
-        if os.path.exists(MODEL_OUTPUT_DIR) and ENVIRONMENT=="prod":
-            for f in os.listdir(MODEL_OUTPUT_DIR):
-                file_path = os.path.join(MODEL_OUTPUT_DIR, f)
-                if os.path.isfile(file_path):
-                    os.remove(file_path)
-            logger.info(f"Cleared all files from {MODEL_OUTPUT_DIR}")
+        if ENVIRONMENT=="prod":
+            if os.path.exists(MODEL_OUTPUT_DIR):
+                for f in os.listdir(MODEL_OUTPUT_DIR):
+                    file_path = os.path.join(MODEL_OUTPUT_DIR, f)
+                    if os.path.isfile(file_path):
+                        os.remove(file_path)
+                logger.info(f"Cleared all files from {MODEL_OUTPUT_DIR}")
+            else:
+                logger.info(f"MODEL_OUTPUT_DIR {MODEL_OUTPUT_DIR} does not exist. No files to clear.")
         else:
-            logger.info(f"MODEL_OUTPUT_DIR {MODEL_OUTPUT_DIR} does not exist. No files to clear.")
+            logger.info("Environment is not 'prod'. No action taken for clearing model output data directory.")
     except Exception as e:
         logger.error(f"Error clearing MODEL_OUTPUT_DIR: {e}")
         st.error(f"Error clearing model output data directory: {e}")

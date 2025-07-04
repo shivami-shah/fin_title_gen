@@ -145,7 +145,7 @@ class ExcelProcessor:
         self.logger.info(f"Found {len(workbook.sheetnames)} sheets: {', '.join(workbook.sheetnames)}")
 
         for sheet_name in workbook.sheetnames:
-            self.logger.info(f"  Extracting data from sheet: '{sheet_name}'...")
+            # self.logger.info(f"  Extracting data from sheet: '{sheet_name}'...")
             sheet_data = self.extract_data_from_single_sheet(workbook, sheet_name)
             all_extracted_data.extend(sheet_data)
             self.logger.info(f"    Extracted {len(sheet_data)} entries from '{sheet_name}'.")
